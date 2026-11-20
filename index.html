@@ -34,7 +34,7 @@
 <body>
 <canvas id="stage"></canvas>
 <h1 id="title">MERRY CHRISTMAS</h1>
-<div id="hint">拖动旋转 · 滚轮 / 双指缩放</div>
+<div id="hint">拖动旋转 · 点礼盒开盖 · 滚轮 / 双指缩放</div>
 <div id="fallback">当前浏览器无法启用 WebGL，请换用 Chrome / Edge / Safari 打开。</div>
 
 <script type="importmap">
@@ -149,19 +149,42 @@ scene.add(treeGroup);
 
 /* 树冠整体抬高一点，把底下的树干露出来 */
 const canopy = new THREE.Group();
-canopy.position.y = 0.30;
+canopy.position.y = 0.42;
 treeGroup.add(canopy);
 
-/* ---------- 树干：顶端伸进树冠里面，只露出下面一小截 ---------- */
-const trunk = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.085, 0.155, 0.78, 20),
-  new THREE.MeshStandardMaterial({
-    color: 0x3b2718, roughness: 0.95, metalness: 0.0,
-    emissive: 0x180c04, emissiveIntensity: 0.35
-  })
-);
-trunk.position.y = 0.355;   // 从 -0.035 到 0.745
+/* ---------- 树干：顶端伸进树冠里，越往上越暗，融进树冠的暗部 ---------- */
+const trunkGeo = new THREE.CylinderGeometry(0.10, 0.165, 0.95, 24, 10);
+{
+  const pos = trunkGeo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const cBottom = new THREE.Color(0x7d5433);
+  const cTop = new THREE.Color(0x0e0805);
+  const tmp = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    const k = THREE.MathUtils.smoothstep(y, -0.08, 0.42);
+    tmp.copy(cBottom).lerp(cTop, k);
+    // 一点纵向的木纹明暗，免得像塑料
+    const grain = 0.88 + 0.12 * Math.sin(y * 46 + Math.atan2(pos.getX(i), pos.getZ(i)) * 5.0);
+    tmp.multiplyScalar(grain);
+    colors[i * 3 + 0] = tmp.r;
+    colors[i * 3 + 1] = tmp.g;
+    colors[i * 3 + 2] = tmp.b;
+  }
+  trunkGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
+const trunk = new THREE.Mesh(trunkGeo, new THREE.MeshStandardMaterial({
+  vertexColors: true, roughness: 0.85, metalness: 0.0,
+  emissive: 0x1a0e06, emissiveIntensity: 0.35
+}));
+trunk.position.y = 0.445;   // 从 -0.03 到 0.92
 treeGroup.add(trunk);
+
+// 专门给树干打一盏侧光，免得它跟背景一样黑
+const trunkLight = new THREE.PointLight(0xffc98a, 4.5, 5.0, 2);
+trunkLight.position.set(0.85, 0.40, 1.05);
+treeGroup.add(trunkLight);
 
 /* ---------- 树叶：体积锥体 + 着色器做随时间流动的渐变 ---------- */
 const FOLIAGE_COUNT = 20000;
@@ -463,17 +486,65 @@ const giftSpecs = [
 for (const spec of giftSpecs) {
   const { w, h, d } = spec;
   const group = new THREE.Group();
+  group.position.set(spec.x, 0, spec.z);   // 组的原点放在地面上
+  group.rotation.y = spec.ry;
+
+  const bodyH = h * 0.72;
+  const lidH = h * 0.28;
 
   const boxMat = new THREE.MeshStandardMaterial({
     color: spec.color, roughness: 0.5, metalness: 0.15,
-    emissive: spec.color, emissiveIntensity: 0.18
+    emissive: spec.color, emissiveIntensity: 0.22, side: THREE.DoubleSide
   });
   const ribMat = new THREE.MeshStandardMaterial({
     color: spec.ribbon, roughness: 0.3, metalness: 0.35,
-    emissive: spec.ribbon, emissiveIntensity: 0.32
+    emissive: spec.ribbon, emissiveIntensity: 0.35
   });
 
-  group.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), boxMat));
+  // 盒体
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, bodyH, d), boxMat);
+  body.position.y = bodyH / 2;
+  group.add(body);
+
+  // 盒体上的十字缎带
+  const bandA = new THREE.Mesh(new THREE.BoxGeometry(w * 0.16, bodyH * 1.01, d * 1.01), ribMat);
+  bandA.position.y = bodyH / 2;
+  const bandB = new THREE.Mesh(new THREE.BoxGeometry(w * 1.01, bodyH * 1.01, d * 0.16), ribMat);
+  bandB.position.y = bodyH / 2;
+  group.add(bandA, bandB);
+
+  // 盖子：铰链在盒子后沿，绕 X 轴往后翻开
+  const lidPivot = new THREE.Group();
+  lidPivot.position.set(0, bodyH, -d / 2);
+  group.add(lidPivot);
+
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(w * 1.05, lidH, d * 1.05), boxMat);
+  lid.position.set(0, lidH / 2, d / 2);
+  lidPivot.add(lid);
+
+  const lidBandA = new THREE.Mesh(new THREE.BoxGeometry(w * 0.17, lidH * 1.02, d * 1.07), ribMat);
+  lidBandA.position.set(0, lidH / 2, d / 2);
+  const lidBandB = new THREE.Mesh(new THREE.BoxGeometry(w * 1.07, lidH * 1.02, d * 0.17), ribMat);
+  lidBandB.position.set(0, lidH / 2, d / 2);
+  lidPivot.add(lidBandA, lidBandB);
+
+  // 顶上的蝴蝶结，跟着盖子一起翻
+  const bowL = new THREE.Mesh(new THREE.BoxGeometry(w * 0.30, h * 0.13, d * 0.10), ribMat);
+  bowL.position.set(-w * 0.17, lidH + h * 0.04, d / 2);
+  bowL.rotation.z = 0.85;
+  const bowR = bowL.clone();
+  bowR.position.x = w * 0.17;
+  bowR.rotation.z = -0.85;
+  lidPivot.add(bowL, bowR);
+
+  // 开盖时从盒子里透出来的暖光
+  const innerGlow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: GLOW, color: 0xfff0c4, transparent: true, opacity: 0,
+    depthWrite: false, blending: THREE.AdditiveBlending
+  }));
+  innerGlow.position.y = bodyH * 0.92;
+  innerGlow.scale.setScalar(w * 1.25);
+  group.add(innerGlow);
 
   // 盒子底下的一圈暖光，把它压在地面上
   const halo = new THREE.Mesh(
@@ -484,25 +555,15 @@ for (const spec of giftSpecs) {
     })
   );
   halo.rotation.x = -Math.PI / 2;
-  halo.position.y = -h / 2 + 0.004;
+  halo.position.y = 0.004;
   group.add(halo);
 
-  // 两条交叉缎带，尺寸略放大一点，避免和盒面 z-fighting
-  group.add(new THREE.Mesh(new THREE.BoxGeometry(w * 0.16, h * 1.02, d * 1.02), ribMat));
-  group.add(new THREE.Mesh(new THREE.BoxGeometry(w * 1.02, h * 1.02, d * 0.16), ribMat));
-
-  // 顶上的蝴蝶结：两片向外张开的小缎带
-  const bowL = new THREE.Mesh(new THREE.BoxGeometry(w * 0.30, h * 0.16, d * 0.10), ribMat);
-  bowL.position.set(-w * 0.17, h / 2 + h * 0.05, 0);
-  bowL.rotation.z = 0.85;
-  const bowR = bowL.clone();
-  bowR.position.x = w * 0.17;
-  bowR.rotation.z = -0.85;
-  group.add(bowL, bowR);
-
-  group.position.set(spec.x, h / 2, spec.z);
-  group.rotation.y = spec.ry;
   group.userData.baseX = spec.x;
+  group.userData.lidPivot = lidPivot;
+  group.userData.innerGlow = innerGlow;
+  group.userData.glowScale = w * 1.25;
+  group.userData.openTarget = 0;
+  group.userData.openAmount = 0;
   gifts.add(group);
 }
 
@@ -537,6 +598,23 @@ function pinchDistance() {
   return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) || 1;
 }
 
+/* 点击礼盒：射线检测，命中哪个就翻哪个的盖子 */
+const raycaster = new THREE.Raycaster();
+const ndc = new THREE.Vector2();
+let downX = 0, downY = 0, downTime = 0;
+
+function pickGift(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  ndc.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  ndc.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObjects(gifts.children, true);
+  if (!hits.length) return null;
+  let o = hits[0].object;
+  while (o && o.parent !== gifts) o = o.parent;
+  return o && o.parent === gifts ? o : null;
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   canvas.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -544,6 +622,9 @@ canvas.addEventListener('pointerdown', (e) => {
   if (pointers.size === 1) {
     dragging = true;
     lastX = e.clientX;
+    downX = e.clientX;
+    downY = e.clientY;
+    downTime = performance.now();
   } else if (pointers.size === 2) {
     dragging = false;
     pinchStartDist = pinchDistance();
@@ -552,7 +633,11 @@ canvas.addEventListener('pointerdown', (e) => {
 });
 
 canvas.addEventListener('pointermove', (e) => {
-  if (!pointers.has(e.pointerId)) return;
+  if (!pointers.has(e.pointerId)) {
+    // 没按下时只做悬停手型提示
+    canvas.style.cursor = pickGift(e.clientX, e.clientY) ? 'pointer' : 'grab';
+    return;
+  }
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
   if (pointers.size === 1 && dragging) {
@@ -571,7 +656,17 @@ function endPointer(e) {
   pointers.delete(e.pointerId);
   if (pointers.size === 0) dragging = false;
 }
-canvas.addEventListener('pointerup', endPointer);
+
+canvas.addEventListener('pointerup', (e) => {
+  const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+  const isClick = e.pointerType !== undefined && moved < 8 && (performance.now() - downTime) < 700;
+  const wasSingle = pointers.size === 1;
+  endPointer(e);
+  if (wasSingle && isClick) {
+    const g = pickGift(e.clientX, e.clientY);
+    if (g) g.userData.openTarget = g.userData.openTarget > 0.5 ? 0 : 1;
+  }
+});
 canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('pointerleave', endPointer);
 
@@ -635,6 +730,19 @@ function animate() {
     const tw = 0.5 + 0.5 * Math.sin(t * s.userData.speed + s.userData.phase);
     s.scale.setScalar(s.userData.base * (0.55 + 1.10 * tw));
     s.material.opacity = 0.20 + 0.80 * tw;
+  }
+
+  // 礼盒开盖 / 合盖
+  for (let i = 0; i < gifts.children.length; i++) {
+    const ud = gifts.children[i].userData;
+    if (!ud.lidPivot) continue;
+    ud.openAmount += (ud.openTarget - ud.openAmount) * Math.min(1, dt * 8.0);
+    if (Math.abs(ud.openTarget - ud.openAmount) < 0.001) ud.openAmount = ud.openTarget;
+    ud.lidPivot.rotation.x = -ud.openAmount * 1.75;
+    if (ud.innerGlow) {
+      ud.innerGlow.material.opacity = ud.openAmount * (0.55 + 0.18 * Math.sin(t * 3 + i));
+      ud.innerGlow.scale.setScalar(ud.glowScale * (0.55 + 0.45 * ud.openAmount) * (1 + 0.05 * Math.sin(t * 3 + i)));
+    }
   }
 
   // 树顶星星
