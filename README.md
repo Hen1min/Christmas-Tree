@@ -54,5 +54,6 @@ index.html                 页面 + 场景 + 交互（全部逻辑都在这一�
 vendor/three.module.js     three.js r160 本地副本
 .github/workflows/pages.yml  推 main 自动发布到 GitHub Pages
 start.bat                  本地起服务
-preview.png                截图
+preview.png                截图（合盖）
+preview-open.png           截图（开盖，能看到空腔）
 ```
