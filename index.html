@@ -147,6 +147,22 @@ const R = 1.45;  // 底部半径
 const treeGroup = new THREE.Group();
 scene.add(treeGroup);
 
+/* 树冠整体抬高一点，把底下的树干露出来 */
+const canopy = new THREE.Group();
+canopy.position.y = 0.30;
+treeGroup.add(canopy);
+
+/* ---------- 树干：顶端伸进树冠里面，只露出下面一小截 ---------- */
+const trunk = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.085, 0.155, 0.78, 20),
+  new THREE.MeshStandardMaterial({
+    color: 0x3b2718, roughness: 0.95, metalness: 0.0,
+    emissive: 0x180c04, emissiveIntensity: 0.35
+  })
+);
+trunk.position.y = 0.355;   // 从 -0.035 到 0.745
+treeGroup.add(trunk);
+
 /* ---------- 树叶：体积锥体 + 着色器做随时间流动的渐变 ---------- */
 const FOLIAGE_COUNT = 20000;
 const fPos = new Float32Array(FOLIAGE_COUNT * 3);
@@ -157,7 +173,7 @@ const fPhase = new Float32Array(FOLIAGE_COUNT);
 for (let i = 0; i < FOLIAGE_COUNT; i++) {
   const t = Math.pow(Math.random(), 0.72);          // 底部更密
   const rMax = R * (1 - t);
-  const r = rMax * (0.55 + 0.45 * Math.sqrt(Math.random())); // 向内填充，形成体积
+  const r = rMax * (0.10 + 0.90 * Math.sqrt(Math.random())); // 填满内部，避免中心空心
   const a = Math.random() * Math.PI * 2;
   fPos[i * 3 + 0] = Math.cos(a) * r;
   fPos[i * 3 + 1] = t * H + (Math.random() - 0.5) * 0.05;
@@ -220,7 +236,7 @@ const foliageMat = new THREE.ShaderMaterial({
   blending: THREE.AdditiveBlending
 });
 
-treeGroup.add(new THREE.Points(foliageGeo, foliageMat));
+canopy.add(new THREE.Points(foliageGeo, foliageMat));
 
 /* ---------- 螺旋灯带：一圈圈绕上去，光点像电流一样流动 ---------- */
 const GARLAND_COUNT = 2400;
@@ -252,7 +268,7 @@ const garlandMat = new THREE.PointsMaterial({
   sizeAttenuation: true
 });
 
-treeGroup.add(new THREE.Points(garlandGeo, garlandMat));
+canopy.add(new THREE.Points(garlandGeo, garlandMat));
 
 /* ---------- 挂饰：金 / 红 / 白 / 冰蓝的亮点 ---------- */
 const ORNAMENT_COUNT = 90;
@@ -288,11 +304,11 @@ const ornamentMat = new THREE.PointsMaterial({
   sizeAttenuation: true
 });
 
-treeGroup.add(new THREE.Points(ornamentGeo, ornamentMat));
+canopy.add(new THREE.Points(ornamentGeo, ornamentMat));
 
 /* ---------- 树上的彩球：真正的小球体，靠灯光 + 自发光发亮 ---------- */
 const baubleGroup = new THREE.Group();
-treeGroup.add(baubleGroup);
+canopy.add(baubleGroup);
 const BAUBLE_COLORS = [0xff4d6d, 0xffd166, 0x4dd6ff, 0xb07bff, 0x37e59b, 0xff9a3d];
 const baubles = [];
 for (let i = 0; i < 16; i++) {
@@ -315,7 +331,7 @@ for (let i = 0; i < 16; i++) {
 
 /* ---------- 树上的闪光星芒：随机位置、各自呼吸闪烁 ---------- */
 const sparkleGroup = new THREE.Group();
-treeGroup.add(sparkleGroup);
+canopy.add(sparkleGroup);
 const sparkles = [];
 for (let i = 0; i < 18; i++) {
   const t = 0.12 + Math.random() * 0.76;
@@ -336,7 +352,7 @@ for (let i = 0; i < 18; i++) {
 /* ---------- 树顶星星：一个光球 + 四道十字flare ---------- */
 const starGroup = new THREE.Group();
 starGroup.position.set(0, H + 0.16, 0);
-treeGroup.add(starGroup);
+canopy.add(starGroup);
 
 const coreMat = new THREE.SpriteMaterial({
   map: GLOW, color: 0xfff3c4, transparent: true,
@@ -420,8 +436,8 @@ scene.add(groundGlow);
 /* ---------- 树身外围的柔光：手动做一点 bloom 的扩散感 ---------- */
 const halos = [];
 for (const cfg of [
-  { y: 1.00, scale: 4.8, color: 0x2bff9e, opacity: 0.055 },
-  { y: 2.35, scale: 2.9, color: 0x3ad6ff, opacity: 0.05 }
+  { y: 1.35, scale: 4.8, color: 0x2bff9e, opacity: 0.055 },
+  { y: 2.70, scale: 2.9, color: 0x3ad6ff, opacity: 0.05 }
 ]) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({
     map: GLOW, color: cfg.color, transparent: true, opacity: cfg.opacity,
