@@ -64,12 +64,24 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 
 const scene = new THREE.Scene();
+
+// 灯光只影响有材质的物体（礼盒、彩球），光点粒子本身是自发光的
+scene.add(new THREE.AmbientLight(0x33445c, 1.6));
+const keyLight = new THREE.PointLight(0xffd9a8, 16, 16, 2);
+keyLight.position.set(1.8, 3.0, 2.6);
+scene.add(keyLight);
+const fillLight = new THREE.PointLight(0x66d9ff, 9, 14, 2);
+fillLight.position.set(-2.6, 1.6, -1.2);
+scene.add(fillLight);
+
 const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 400);
 const LOOK_AT = new THREE.Vector3(0, 1.72, 0);
 let camZ = 8.0;
 
 function layoutCamera() {
-  camera.position.set(0, 2.6, camZ);
+  // 竖屏（手机）时把相机拉远一点，免得两侧的礼盒被裁掉
+  const fit = window.innerWidth / window.innerHeight < 0.75 ? 1.24 : 1.0;
+  camera.position.set(0, 2.6, camZ * fit);
   camera.lookAt(LOOK_AT);
 }
 
@@ -90,6 +102,44 @@ function makeGlowTexture(size = 128) {
   return t;
 }
 const GLOW = makeGlowTexture();
+
+/* 四角星芒贴图：给树上的闪光点用 */
+function makeSparkleTexture(size = 128) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  const cx = size / 2;
+  const grd = g.createRadialGradient(cx, cx, 0, cx, cx, cx * 0.55);
+  grd.addColorStop(0.0, 'rgba(255,255,255,1)');
+  grd.addColorStop(0.30, 'rgba(255,255,255,0.45)');
+  grd.addColorStop(1.0, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.beginPath();
+  g.arc(cx, cx, cx, 0, Math.PI * 2);
+  g.fill();
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 4; i++) {
+    g.save();
+    g.translate(cx, cx);
+    g.rotate((i * Math.PI) / 2);
+    const lg = g.createLinearGradient(0, 0, 0, -cx);
+    lg.addColorStop(0, 'rgba(255,255,255,0.95)');
+    lg.addColorStop(0.55, 'rgba(255,255,255,0.35)');
+    lg.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = lg;
+    g.beginPath();
+    g.moveTo(-cx * 0.055, 0);
+    g.lineTo(0, -cx * 0.98);
+    g.lineTo(cx * 0.055, 0);
+    g.closePath();
+    g.fill();
+    g.restore();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const SPARKLE = makeSparkleTexture();
 
 const H = 3.5;   // 树高
 const R = 1.45;  // 底部半径
@@ -240,6 +290,49 @@ const ornamentMat = new THREE.PointsMaterial({
 
 treeGroup.add(new THREE.Points(ornamentGeo, ornamentMat));
 
+/* ---------- 树上的彩球：真正的小球体，靠灯光 + 自发光发亮 ---------- */
+const baubleGroup = new THREE.Group();
+treeGroup.add(baubleGroup);
+const BAUBLE_COLORS = [0xff4d6d, 0xffd166, 0x4dd6ff, 0xb07bff, 0x37e59b, 0xff9a3d];
+const baubles = [];
+for (let i = 0; i < 16; i++) {
+  const t = 0.10 + Math.random() * 0.74;
+  const r = R * (1 - t) * 1.02;
+  const a = Math.random() * Math.PI * 2;
+  const col = BAUBLE_COLORS[i % BAUBLE_COLORS.length];
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(0.052 + Math.random() * 0.028, 16, 12),
+    new THREE.MeshStandardMaterial({
+      color: col, emissive: col, emissiveIntensity: 0.85,
+      roughness: 0.28, metalness: 0.45
+    })
+  );
+  m.position.set(Math.cos(a) * r, t * H, Math.sin(a) * r);
+  m.userData.phase = Math.random() * Math.PI * 2;
+  baubleGroup.add(m);
+  baubles.push(m);
+}
+
+/* ---------- 树上的闪光星芒：随机位置、各自呼吸闪烁 ---------- */
+const sparkleGroup = new THREE.Group();
+treeGroup.add(sparkleGroup);
+const sparkles = [];
+for (let i = 0; i < 18; i++) {
+  const t = 0.12 + Math.random() * 0.76;
+  const r = R * (1 - t) * (0.9 + Math.random() * 0.16);
+  const a = Math.random() * Math.PI * 2;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: SPARKLE, transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, color: 0xfff4d6, opacity: 0.8
+  }));
+  s.position.set(Math.cos(a) * r, t * H, Math.sin(a) * r);
+  const base = 0.18 + Math.random() * 0.2;
+  s.scale.setScalar(base);
+  s.userData = { base, phase: Math.random() * Math.PI * 2, speed: 0.6 + Math.random() * 1.0 };
+  sparkleGroup.add(s);
+  sparkles.push(s);
+}
+
 /* ---------- 树顶星星：一个光球 + 四道十字flare ---------- */
 const starGroup = new THREE.Group();
 starGroup.position.set(0, H + 0.16, 0);
@@ -340,6 +433,73 @@ for (const cfg of [
   halos.push(s);
 }
 
+/* ---------- 地上的礼盒 ---------- */
+const gifts = new THREE.Group();
+scene.add(gifts);
+
+const giftSpecs = [
+  { w: 0.62, h: 0.50, d: 0.62, x: -1.62, z: 0.80, ry: 0.34, color: 0xe0455c, ribbon: 0xffd98a },
+  { w: 0.48, h: 0.42, d: 0.48, x: 1.54, z: 0.88, ry: -0.52, color: 0x2fb8a8, ribbon: 0xfff1cc },
+  { w: 0.34, h: 0.30, d: 0.34, x: 0.74, z: 1.70, ry: 0.85, color: 0x8f6cf2, ribbon: 0xffc2e8 },
+  { w: 0.40, h: 0.34, d: 0.40, x: -0.62, z: 1.58, ry: -0.22, color: 0x4a7cf0, ribbon: 0xd8e6ff }
+];
+
+for (const spec of giftSpecs) {
+  const { w, h, d } = spec;
+  const group = new THREE.Group();
+
+  const boxMat = new THREE.MeshStandardMaterial({
+    color: spec.color, roughness: 0.5, metalness: 0.15,
+    emissive: spec.color, emissiveIntensity: 0.18
+  });
+  const ribMat = new THREE.MeshStandardMaterial({
+    color: spec.ribbon, roughness: 0.3, metalness: 0.35,
+    emissive: spec.ribbon, emissiveIntensity: 0.32
+  });
+
+  group.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), boxMat));
+
+  // 盒子底下的一圈暖光，把它压在地面上
+  const halo = new THREE.Mesh(
+    new THREE.PlaneGeometry(w * 2.6, d * 2.6),
+    new THREE.MeshBasicMaterial({
+      map: GLOW, color: spec.ribbon, transparent: true, opacity: 0.18,
+      depthWrite: false, blending: THREE.AdditiveBlending
+    })
+  );
+  halo.rotation.x = -Math.PI / 2;
+  halo.position.y = -h / 2 + 0.004;
+  group.add(halo);
+
+  // 两条交叉缎带，尺寸略放大一点，避免和盒面 z-fighting
+  group.add(new THREE.Mesh(new THREE.BoxGeometry(w * 0.16, h * 1.02, d * 1.02), ribMat));
+  group.add(new THREE.Mesh(new THREE.BoxGeometry(w * 1.02, h * 1.02, d * 0.16), ribMat));
+
+  // 顶上的蝴蝶结：两片向外张开的小缎带
+  const bowL = new THREE.Mesh(new THREE.BoxGeometry(w * 0.30, h * 0.16, d * 0.10), ribMat);
+  bowL.position.set(-w * 0.17, h / 2 + h * 0.05, 0);
+  bowL.rotation.z = 0.85;
+  const bowR = bowL.clone();
+  bowR.position.x = w * 0.17;
+  bowR.rotation.z = -0.85;
+  group.add(bowL, bowR);
+
+  group.position.set(spec.x, h / 2, spec.z);
+  group.rotation.y = spec.ry;
+  group.userData.baseX = spec.x;
+  gifts.add(group);
+}
+
+// 手机竖屏时把礼盒往中间收，免得最外侧的盒子被屏幕裁掉
+function layoutGifts() {
+  const narrow = window.innerWidth / window.innerHeight < 0.75;
+  const fx = narrow ? 0.76 : 1.0;
+  for (const g of gifts.children) {
+    g.position.x = g.userData.baseX * fx;
+  }
+}
+layoutGifts();
+
 /* ---------- 交互：拖动水平旋转 + 滚轮 / 双指缩放 ---------- */
 const pointers = new Map();
 let dragging = false;
@@ -417,6 +577,7 @@ function resize() {
   camera.fov = w / h < 0.75 ? 52 : 42;
   camera.updateProjectionMatrix();
   layoutCamera();
+  layoutGifts();
   foliageMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
   renderer.render(scene, camera);
 }
@@ -448,6 +609,17 @@ function animate() {
 
   // 挂饰呼吸
   ornamentMat.size = 0.072 + 0.014 * Math.sin(t * 2.2);
+
+  // 彩球明暗 + 星星闪光
+  for (let i = 0; i < baubles.length; i++) {
+    baubles[i].material.emissiveIntensity = 0.70 + 0.35 * Math.sin(t * 1.4 + baubles[i].userData.phase);
+  }
+  for (let i = 0; i < sparkles.length; i++) {
+    const s = sparkles[i];
+    const tw = 0.5 + 0.5 * Math.sin(t * s.userData.speed + s.userData.phase);
+    s.scale.setScalar(s.userData.base * (0.55 + 1.10 * tw));
+    s.material.opacity = 0.20 + 0.80 * tw;
+  }
 
   // 树顶星星
   const pulse = 1 + 0.12 * Math.sin(t * 2.1);
