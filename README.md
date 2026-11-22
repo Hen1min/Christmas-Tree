@@ -6,6 +6,7 @@
 - 三维库放在 `vendor/three.module.js`，**不依赖任何 CDN**，断网 / 国内访问都能开
 - 手机竖屏会自动拉远视角、把礼盒往中间收，双指可缩放
 - 礼盒点一下翻盖打开，再点一下合上；盒体是 5 块面拼的**开口盒**，打开看到的是空腔
+- 开盖时盒子里会**随机蹦出一个 Q 版小玩具**（巧克力 / 小飞机 / 玩具车 / 大哥大 / 糖果 / 伸缩拳套），合盖时缩回盒里，下次再开重新随机
 - 右下角 ♪ 可以开关背景音乐（`Jingle Bells`，用 WebAudio 现场合成，没有音频文件）
 
 ## 本地预览
@@ -34,6 +35,10 @@ https://hen1min.github.io/Christmas-Tree/
 | 彩球颜色 | `BAUBLE_COLORS` 数组 |
 | 彩球个数 | 彩球循环的 `i < 16` |
 | 闪光星芒个数 | 星芒循环的 `i < 18` |
+| 玩具种类 / 造型 | `makeChocolate / makePlane / makeCar / makeBrickPhone / makeCandy / makeSpringFist`，都在 `TOY_MAKERS` 里 |
+| 玩具蹦出来的高度 | `group.userData.toyY1 = bodyH + h * 0.45` |
+| 玩具大小 | `const toyScale = (0.85 * Math.min(w, d)) / 0.26` |
+| 玩具初始朝向 | `TOY_FACE` 数组，六个角度对应六个玩具 |
 
 ## 场景里都有什么
 
@@ -44,6 +49,7 @@ https://hen1min.github.io/Christmas-Tree/
 - 星芒：18 个四角星 sprite，各自带相位闪烁
 - 树顶：光球 + 三道旋转的十字 flare
 - 礼盒：4 个，盒体为「底板 + 4 面墙」的开口盒，带缎带、蝴蝶结、地面暖光；盖子铰链在后沿
+- 玩具：6 个 Q 版小物件全用基础几何体拼（巧克力块、螺旋桨小飞机、圆顶小车、大哥大、两头拧的糖果、弹簧拳套），开盖随机挑一个蹦出来、轻微上下浮动，合盖时缩小退回盒内
 - 音乐：`Jingle Bells` 主旋律 + 低音 pad，`MELODY` / `BASS_PATTERN` 数组里写音符，`TEMPO` 改速度
 - 其他：飘雪、背景星空、地面辉光、树身外围柔光
 
