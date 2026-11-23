@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -785,20 +785,65 @@ for (const spec of giftSpecs) {
     group.add(strip);
   }
 
-  // 盖子：铰链在盒子后沿，绕 X 轴往后翻开
+  // 盖子：和盒体一样只拼「顶板 + 4 面裙边」，是个空心的罩子，
+  // 翻开时能看到盖子内腔，不再是一块实心长方体。
   const lidPivot = new THREE.Group();
   lidPivot.position.set(0, bodyH, -d / 2);
   group.add(lidPivot);
 
-  const lid = new THREE.Mesh(new THREE.BoxGeometry(w * 1.05, lidH, d * 1.05), boxMat);
-  lid.position.set(0, lidH / 2, d / 2);
-  lidPivot.add(lid);
+  const lw = w * 1.05;
+  const ld = d * 1.05;
+  const lc = d / 2;     // 盖子中心在铰链坐标系的 z 位置
+  const hx = lw / 2;
+  const hz = ld / 2;
 
-  const lidBandA = new THREE.Mesh(new THREE.BoxGeometry(w * 0.17, lidH * 1.02, d * 1.07), ribMat);
-  lidBandA.position.set(0, lidH / 2, d / 2);
-  const lidBandB = new THREE.Mesh(new THREE.BoxGeometry(w * 1.07, lidH * 1.02, d * 0.17), ribMat);
-  lidBandB.position.set(0, lidH / 2, d / 2);
-  lidPivot.add(lidBandA, lidBandB);
+  // 顶板
+  const lidTop = new THREE.Mesh(new THREE.PlaneGeometry(lw, ld), boxMat);
+  lidTop.rotation.x = -Math.PI / 2;
+  lidTop.position.set(0, lidH, lc);
+  lidPivot.add(lidTop);
+
+  // 四面往下垂的裙边
+  const lidFront = new THREE.Mesh(new THREE.PlaneGeometry(lw, lidH), boxMat);
+  lidFront.position.set(0, lidH / 2, lc + hz);
+
+  const lidBack = new THREE.Mesh(new THREE.PlaneGeometry(lw, lidH), boxMat);
+  lidBack.position.set(0, lidH / 2, lc - hz);
+  lidBack.rotation.y = Math.PI;
+
+  const lidLeft = new THREE.Mesh(new THREE.PlaneGeometry(ld, lidH), boxMat);
+  lidLeft.position.set(-hx, lidH / 2, lc);
+  lidLeft.rotation.y = Math.PI / 2;
+
+  const lidRight = new THREE.Mesh(new THREE.PlaneGeometry(ld, lidH), boxMat);
+  lidRight.position.set(hx, lidH / 2, lc);
+  lidRight.rotation.y = -Math.PI / 2;
+
+  lidPivot.add(lidFront, lidBack, lidLeft, lidRight);
+
+  // 盖子上的缎带：顶面两条交叉 + 四个裙边上的竖条
+  const lidTopA = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.17, ld), ribMat);
+  lidTopA.rotation.x = -Math.PI / 2;
+  lidTopA.position.set(0, lidH + 0.003, lc);
+  lidPivot.add(lidTopA);
+
+  const lidTopB = new THREE.Mesh(new THREE.PlaneGeometry(lw, d * 0.17), ribMat);
+  lidTopB.rotation.x = -Math.PI / 2;
+  lidTopB.position.set(0, lidH + 0.004, lc);
+  lidPivot.add(lidTopB);
+
+  for (const zs of [1, -1]) {
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.17, lidH), ribMat);
+    s.position.set(0, lidH / 2, lc + zs * (hz + 0.003));
+    s.rotation.y = zs > 0 ? 0 : Math.PI;
+    lidPivot.add(s);
+  }
+  for (const xs of [1, -1]) {
+    const s = new THREE.Mesh(new THREE.PlaneGeometry(d * 0.17, lidH), ribMat);
+    s.position.set(xs * (hx + 0.003), lidH / 2, lc);
+    s.rotation.y = xs > 0 ? Math.PI / 2 : -Math.PI / 2;
+    lidPivot.add(s);
+  }
 
   // 顶上的蝴蝶结，跟着盖子一起翻
   const bowL = new THREE.Mesh(new THREE.BoxGeometry(w * 0.30, h * 0.13, d * 0.10), ribMat);
