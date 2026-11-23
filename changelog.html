@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#03050a">
+<title>更新日志 · 圣诞树</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(1100px 620px at 50% 0%, #0b1727 0%, #050a12 55%, #03050a 100%);
+    color: #cfe0f5;
+    font: 14px/1.75 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 40px 20px 72px;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; }
+
+  header { margin-bottom: 28px; }
+  h1 {
+    margin: 0 0 8px;
+    font-size: clamp(20px, 4.4vw, 28px);
+    font-weight: 600;
+    letter-spacing: .18em;
+    background: linear-gradient(92deg, #8ef7c1, #7ed6ff, #c9a6ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .sub { margin: 0; font-size: 12.5px; color: rgba(200, 222, 250, .55); letter-spacing: .05em; }
+
+  .entry {
+    position: relative;
+    padding: 16px 18px 14px;
+    margin: 0 0 14px;
+    border: 1px solid rgba(150, 210, 255, .14);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .022);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
+  }
+  .entry.latest { border-color: rgba(140, 240, 190, .3); background: rgba(30, 90, 66, .1); }
+
+  .date {
+    display: inline-block;
+    margin-bottom: 8px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(150, 210, 255, .22);
+    background: rgba(12, 22, 34, .6);
+    font-size: 11.5px;
+    letter-spacing: .1em;
+    color: #96d8ff;
+  }
+  .entry.latest .date { border-color: rgba(140, 240, 190, .35); color: #9ef2c6; }
+
+  .tag {
+    margin-left: 7px;
+    font-size: 11px;
+    letter-spacing: .1em;
+    color: #9ef2c6;
+  }
+
+  ul { margin: 0; padding-left: 18px; }
+  li { margin: 5px 0; color: rgba(214, 230, 248, .9); }
+  li::marker { color: rgba(126, 214, 255, .55); }
+  li b { color: #eaf4ff; font-weight: 600; }
+
+  .meta { margin-top: 26px; font-size: 12px; color: rgba(200, 222, 250, .42); }
+
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 26px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(150, 210, 255, .28);
+    background: rgba(12, 22, 34, .5);
+    color: #cfe6ff;
+    text-decoration: none;
+    font-size: 12.5px;
+    letter-spacing: .06em;
+    transition: border-color .25s ease, transform .25s ease;
+  }
+  .back:hover { border-color: rgba(180, 225, 255, .6); transform: translateX(-2px); }
+
+  .top { margin-bottom: 22px; }
+  .top .back { margin-top: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="back" href="./index.html">← 回到圣诞树</a>
+  </div>
+
+  <header>
+    <h1>更新日志</h1>
+    <p class="sub">这棵树上都改过什么 / Changelog</p>
+  </header>
+
+  <article class="entry latest">
+    <span class="date">2026-11-23</span><span class="tag">最新</span>
+    <ul>
+      <li>礼盒盖子改成<b>空心浅罩</b>（顶板 + 4 面裙边），翻开能看到内腔</li>
+      <li>页面右下角新增「更新日志」入口，就是现在这一页</li>
+    </ul>
+  </article>
+
+  <article class="entry">
+    <span class="date">2026-11-22</span>
+    <ul>
+      <li>开盒会<b>随机蹦出一个 Q 版小玩具</b>：巧克力 / 小飞机 / 玩具车 / 大哥大 / 糖果 / 伸缩拳套</li>
+      <li>玩具带缓动升起和轻微浮动，合盖时自动缩回盒里；下次再开重新随机</li>
+    </ul>
+  </article>
+
+  <article class="entry">
+    <span class="date">2026-11-20</span>
+    <ul>
+      <li>上线 GitHub Pages，有了固定网址</li>
+      <li>加<b>树干</b>：圆柱 + 木纹渐变，树冠整体抬高露出下面一截</li>
+      <li>加<b>彩球 16 个</b>（真实球体，自发光 + 灯光呼吸）和<b>闪光星芒 18 个</b></li>
+      <li>加<b>四个礼盒</b>，点一下翻盖打开，盒体改成空心</li>
+      <li>加<b>背景音乐</b>：WebAudio 现场合成 Jingle Bells，右下角 ♪ 开关</li>
+      <li>手机竖屏自适应：拉远视角、礼盒往中间收</li>
+    </ul>
+  </article>
+
+  <article class="entry">
+    <span class="date">2026-11-19</span>
+    <ul>
+      <li>第一版：20000 个粒子堆成的锥体树，颜色随时间走完整个色环</li>
+      <li>拖动水平旋转、松手惯性、自动缓慢自转，滚轮 / 双指缩放</li>
+      <li>飘雪、背景星空、地面辉光、树身外围柔光</li>
+    </ul>
+  </article>
+
+  <p class="meta">只记录功能变化，不记录文字微调。页面本身不会自动刷新，看到旧样子请按 Ctrl+Shift+R 强刷。</p>
+
+  <a class="back" href="./index.html">← 回到圣诞树</a>
+
+</div>
+</body>
+</html>

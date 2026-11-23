@@ -63,5 +63,22 @@ start.bat                  本地起服务
 preview.png                截图（合盖）
 preview-open.png           截图（开盖，能看到空腔）
 preview-lid.png            截图（盖子特写，能看到盖子也是空心的）
+changelog.html             更新日志页（点页面右下角「更新日志」进）
 ```
 
+## 更新日志页
+
+`changelog.html` 是独立的静态页，页面右下角「更新日志」按钮（`#logBtn`）链过去。
+
+发版时手动在 `changelog.html` 最上面加一段 `<article class="entry">`（最新的那个加 `latest` 类）：
+
+```html
+<article class="entry latest">
+  <span class="date">2026-12-01</span><span class="tag">最新</span>
+  <ul>
+    <li>这次改了什么</li>
+  </ul>
+</article>
+```
+
+记得把上一段的 `latest` 类和 `<span class="tag">最新</span>` 去掉。

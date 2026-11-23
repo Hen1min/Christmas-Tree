@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -42,6 +42,21 @@
   #musicBtn:hover { transform: scale(1.06); border-color: rgba(180, 225, 255, .6); }
   #musicBtn.off { opacity: .4; }
 
+  #logBtn {
+    position: fixed; right: 18px; bottom: calc(4vh + 56px);
+    height: 34px; padding: 0 13px;
+    display: grid; place-items: center;
+    border-radius: 17px;
+    border: 1px solid rgba(150, 210, 255, .35);
+    background: rgba(12, 22, 34, .55); color: #cfe6ff;
+    font: 12px/1 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    letter-spacing: .06em; text-decoration: none;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    transition: opacity .25s ease, transform .25s ease, border-color .25s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #logBtn:hover { transform: scale(1.05); border-color: rgba(180, 225, 255, .6); }
+
 
 </style>
 </head>
@@ -50,6 +65,7 @@
 <h1 id="title">MERRY CHRISTMAS</h1>
 <div id="hint">拖动旋转 · 点礼盒开盖 · 滚轮 / 双指缩放</div>
 <button id="musicBtn" type="button" aria-label="背景音乐开关">♪</button>
+<a id="logBtn" href="./changelog.html">更新日志</a>
 
 <div id="fallback">当前浏览器无法启用 WebGL，请换用 Chrome / Edge / Safari 打开。</div>
 
