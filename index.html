@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -41,6 +41,66 @@
   }
   #musicBtn:hover { transform: scale(1.06); border-color: rgba(180, 225, 255, .6); }
   #musicBtn.off { opacity: .4; }
+
+  #bellBtn {
+    position: fixed; right: 18px; bottom: calc(4vh + 56px); width: 44px; height: 44px;
+    border-radius: 50%; border: 1px solid rgba(150, 210, 255, .35);
+    background: rgba(12, 22, 34, .55); color: #cfe6ff;
+    font: 18px/1 system-ui, sans-serif; cursor: pointer;
+    display: grid; place-items: center;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    transition: opacity .25s ease, transform .25s ease, border-color .25s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #bellBtn:hover { transform: scale(1.06); border-color: rgba(180, 225, 255, .6); }
+  #bellBtn.off { opacity: .42; }
+
+  #askNotify {
+    position: fixed; left: 50%; bottom: 9vh; transform: translateX(-50%);
+    width: min(340px, calc(100vw - 32px));
+    padding: 14px 16px 15px; border-radius: 14px;
+    border: 1px solid rgba(150, 210, 255, .28);
+    background: rgba(10, 18, 30, .84);
+    color: #dcebff;
+    font: 13px/1.7 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .5);
+    display: none; z-index: 12;
+  }
+  #askNotify.show { display: block; animation: askRise .32s ease both; }
+  #askNotify h4 { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .04em; }
+  #askNotify p { margin: 0 0 12px; font-size: 12px; color: rgba(210, 228, 255, .72); }
+  #askNotify .row { display: flex; gap: 10px; }
+  #askNotify button {
+    flex: 1; padding: 9px 10px; border-radius: 9px; cursor: pointer;
+    font: 12px/1 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  #askYes { border: 1px solid rgba(140, 240, 190, .5); background: rgba(26, 74, 56, .55); color: #b9f6d3; }
+  #askNo { border: 1px solid rgba(150, 180, 220, .28); background: transparent; color: rgba(200, 220, 245, .68); }
+  @keyframes askRise {
+    from { transform: translate(-50%, 12px); }
+    to { transform: translate(-50%, 0); }
+  }
+  @keyframes toastIn {
+    from { transform: translateY(12px); }
+    to { transform: translateY(0); }
+  }
+
+  #toast {
+    position: fixed; left: 16px; bottom: 4vh;
+    max-width: min(320px, calc(100vw - 32px));
+    padding: 12px 14px; border-radius: 12px;
+    border: 1px solid rgba(140, 240, 190, .26);
+    background: rgba(8, 20, 16, .84); color: #d6f5e6;
+    font: 12px/1.6 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .5);
+    display: none; z-index: 12;
+  }
+  #toast.show { display: block; animation: toastIn .32s ease both; }
+  #toast b { display: block; margin-bottom: 5px; font-size: 12px; letter-spacing: .08em; color: #9ef2c6; }
+  #toast ul { margin: 0; padding-left: 15px; }
+  #toast li { margin: 2px 0; }
 </style>
 </head>
 <body>
@@ -48,6 +108,18 @@
 <h1 id="title">MERRY CHRISTMAS</h1>
 <div id="hint">拖动旋转 · 点礼盒开盖 · 滚轮 / 双指缩放</div>
 <button id="musicBtn" type="button" aria-label="背景音乐开关">♪</button>
+<button id="bellBtn" type="button" aria-label="更新通知开关">🔔</button>
+
+<div id="askNotify" role="dialog" aria-live="polite">
+  <h4>以后更新，要通知你吗？</h4>
+  <p>我之后给这棵树上新东西时，你打开页面就会收到一段更新日志。不想收就点「不用了」，树照常玩。</p>
+  <div class="row">
+    <button id="askYes" type="button">好呀，通知我</button>
+    <button id="askNo" type="button">不用了</button>
+  </div>
+</div>
+
+<div id="toast" role="status"></div>
 <div id="fallback">当前浏览器无法启用 WebGL，请换用 Chrome / Edge / Safari 打开。</div>
 
 <script type="importmap">
@@ -1185,6 +1257,163 @@ musicBtn.addEventListener('click', (e) => {
   else stopMusic();
 });
 
+/* ---------- 更新通知：登录态存在 localStorage，换版本时给愿意收的用户推更新日志 ---------- */
+const SITE_VERSION = '2026-11-23';
+// 每次发版在最前面加一条，格式 { v: '日期', notes: ['改动 1', '改动 2'] }
+const CHANGELOG = [
+  {
+    v: '2026-11-23',
+    notes: [
+      '礼盒盖子改成空心薄壳，翻开能看到内腔',
+      '开盒随机蹦出六个 Q 版小玩具：巧克力 / 飞机 / 小车 / 大哥大 / 糖果 / 拳套',
+      '新增背景音乐开关（右下角 ♪）'
+    ]
+  }
+];
+
+const NOTIFY_KEY = 'xmas-notify';
+const SEEN_KEY = 'xmas-seen';
+const VISITED_KEY = 'xmas-visited';
+
+const bellBtn = el('bellBtn');
+const askBox = el('askNotify');
+const toastBox = el('toast');
+
+function notifyOn() {
+  try { return localStorage.getItem(NOTIFY_KEY) === 'on'; } catch (e) { return false; }
+}
+function store(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* 隐私模式等，忽略 */ }
+}
+function readStore(key) {
+  try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+
+function paintBell() {
+  const on = notifyOn();
+  bellBtn.textContent = on ? '🔔' : '🔕';
+  bellBtn.classList.toggle('off', !on);
+  bellBtn.setAttribute('aria-label', on ? '关闭更新通知' : '开启更新通知');
+}
+
+function showToast(entries) {
+  const ul = document.createElement('ul');
+  for (const e of entries) {
+    for (const line of e.notes) {
+      const li = document.createElement('li');
+      li.textContent = line;
+      ul.appendChild(li);
+    }
+  }
+  toastBox.innerHTML = '<b>更新日志</b>';
+  toastBox.appendChild(ul);
+  toastBox.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toastBox.classList.remove('show'), 15000);
+}
+
+async function systemNotify(entries) {
+  try {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (!('serviceWorker' in navigator)) return;
+    const reg = await navigator.serviceWorker.ready;
+    const body = entries.flatMap((e) => e.notes).slice(0, 4).join('\n');
+    reg.showNotification('圣诞树更新了', {
+      body,
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      tag: 'xmas-update'
+    });
+  } catch (err) {
+    // 推送失败不影响页面
+  }
+}
+
+function pendingEntries() {
+  const seen = readStore(SEEN_KEY) || '';
+  return CHANGELOG.filter((e) => e.v > seen);
+}
+
+function checkUpdates() {
+  if (!notifyOn()) return;
+  const fresh = pendingEntries();
+  store(SEEN_KEY, SITE_VERSION);
+  if (!fresh.length) return;
+  showToast(fresh);
+  systemNotify(fresh);
+}
+
+async function setNotify(on) {
+  if (!on) {
+    store(NOTIFY_KEY, 'off');
+    paintBell();
+    return;
+  }
+  if (!('Notification' in window)) {
+    store(NOTIFY_KEY, 'off');
+    paintBell();
+    showToast([{ v: SITE_VERSION, notes: ['这个浏览器不支持系统通知，换 Chrome / Edge / Safari 试试'] }]);
+    return;
+  }
+  let perm = Notification.permission;
+  if (perm === 'default') {
+    try {
+      perm = await Notification.requestPermission();
+    } catch (err) {
+      perm = 'denied';
+    }
+  }
+  if (perm !== 'granted') {
+    store(NOTIFY_KEY, 'off');
+    paintBell();
+    askBox.classList.remove('show');
+    showToast([{ v: SITE_VERSION, notes: ['浏览器没给通知权限，可以先在地址栏左边允许通知再试'] }]);
+    return;
+  }
+  store(NOTIFY_KEY, 'on');
+  store(SEEN_KEY, SITE_VERSION);   // 从当前这版开始记，不立刻重复推
+  paintBell();
+  askBox.classList.remove('show');
+}
+
+function initNotify() {
+  paintBell();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
+  const visited = readStore(VISITED_KEY);
+  if (!visited) {
+    // 第一次来：只记基线，不打扰
+    store(VISITED_KEY, SITE_VERSION);
+    if (!readStore(SEEN_KEY)) store(SEEN_KEY, SITE_VERSION);
+    return;
+  }
+
+  const pref = readStore(NOTIFY_KEY);
+  if (pref === null) {
+    // 下次再来才问，问一次记一辈子
+    setTimeout(() => askBox.classList.add('show'), 2200);
+  } else if (pref === 'on') {
+    checkUpdates();
+  }
+}
+
+bellBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+bellBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  setNotify(!notifyOn());
+});
+
+el('askYes').addEventListener('click', () => setNotify(true));
+el('askNo').addEventListener('click', () => {
+  store(NOTIFY_KEY, 'off');
+  askBox.classList.remove('show');
+  paintBell();
+});
+
+initNotify();
+
 /* ---------- 尺寸 ---------- */
 function resize() {
   const w = window.innerWidth;
@@ -1323,5 +1552,6 @@ animate();
 </script>
 </body>
 </html>
+
 
 
