@@ -31,7 +31,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp -r index.html vendor _site/
+          cp -r index.html sw.js icon-192.png vendor _site/
 
       - uses: actions/upload-pages-artifact@v3
         with:
