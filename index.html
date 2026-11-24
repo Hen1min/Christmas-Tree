@@ -66,11 +66,7 @@
 <div id="hint">拖动旋转 · 点礼盒开盖 · 滚轮 / 双指缩放</div>
 <button id="musicBtn" type="button" aria-label="背景音乐开关">♪</button>
 <a id="logBtn" href="./changelog.html">更新日志</a>
-<audio id="bgm" loop preload="metadata">
-  <!-- 如果本地放了 audio/local.mp3（不入库），会优先用它；否则用仓库自带的公有领域版本 -->
-  <source src="./audio/local.mp3" type="audio/mpeg">
-  <source src="./audio/jingle-bells.mp3" type="audio/mpeg">
-</audio>
+<audio id="bgm" src="./audio/jingle-bells.mp3" loop preload="metadata"></audio>
 
 <div id="fallback">当前浏览器无法启用 WebGL，请换用 Chrome / Edge / Safari 打开。</div>
 
@@ -1053,28 +1049,42 @@ canvas.addEventListener('wheel', (e) => {
 /* ---------- 背景音乐：真实录音（US Air Force Band of Mid-America 2020） ---------- */
 const musicBtn = el('musicBtn');
 const bgm = el('bgm');
-bgm.volume = 0;
 
 const BGM_MAX_VOL = 0.55;
 let musicFade = null;
 let musicStarted = false;
 let musicOn = true;   // 初始显示为「可关闭」，真正播放在第一次手势时开始
 
+// 想听自己的版本：把文件放成 audio/local.mp3（.gitignore 已忽略）。
+// 先用 HEAD 探一下，存在才换 src，避免 404 把 <audio> 拖进错误态。
+fetch('./audio/local.mp3', { method: 'HEAD' })
+  .then((r) => {
+    const type = r.headers.get('content-type') || '';
+    if (r.ok && (type.indexOf('audio') === 0 || type.indexOf('mpeg') >= 0 || type.indexOf('octet-stream') >= 0)) {
+      bgm.src = './audio/local.mp3';
+      bgm.load();
+    }
+  })
+  .catch(() => {});
+
+// 用定时器做淡入淡出：requestAnimationFrame 在后台标签页/省电模式下会被节流，
+// 之前音量就是这样没升上去，听起来像「没有音乐」。
 function fadeVolume(to, ms, done) {
-  if (musicFade) cancelAnimationFrame(musicFade);
+  if (musicFade) clearInterval(musicFade);
   const from = bgm.volume;
-  const t0 = performance.now();
-  const step = (now) => {
-    const k = Math.min(1, (now - t0) / ms);
+  const steps = Math.max(1, Math.round(ms / 30));
+  let i = 0;
+  musicFade = setInterval(() => {
+    i += 1;
+    const k = Math.min(1, i / steps);
     bgm.volume = Math.max(0, Math.min(1, from + (to - from) * k));
-    if (k < 1) {
-      musicFade = requestAnimationFrame(step);
-    } else {
+    if (k >= 1) {
+      clearInterval(musicFade);
       musicFade = null;
+      bgm.volume = to;
       if (done) done();
     }
-  };
-  musicFade = requestAnimationFrame(step);
+  }, 30);
 }
 
 function paintMusic() {
@@ -1083,28 +1093,26 @@ function paintMusic() {
 }
 
 function startMusic() {
+  bgm.muted = false;
   const p = bgm.play();
+  const settle = () => {
+    musicOn = true;
+    paintMusic();
+    fadeVolume(BGM_MAX_VOL, 1200);
+  };
   if (p && typeof p.then === 'function') {
-    p.then(() => {
-      musicOn = true;
-      paintMusic();
-      fadeVolume(BGM_MAX_VOL, 1400);
-    }).catch(() => {
-      // 浏览器拒绝播放（策略/解码失败），保持关闭态，不影响画面
+    p.then(settle).catch(() => {
+      // 被浏览器策略拦下 / 解码失败：显示成关闭态，再点一次还能试
       musicOn = false;
       paintMusic();
     });
   } else {
-    musicOn = true;
-    paintMusic();
-    fadeVolume(BGM_MAX_VOL, 1400);
+    settle();
   }
 }
 
 function stopMusic() {
-  fadeVolume(0, 400, () => {
-    bgm.pause();
-  });
+  fadeVolume(0, 400, () => bgm.pause());
   musicOn = false;
   paintMusic();
 }
@@ -1271,6 +1279,7 @@ animate();
 </script>
 </body>
 </html>
+
 
 
 
