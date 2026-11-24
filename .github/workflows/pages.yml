@@ -7,12 +7,12 @@ on:
 
 permissions:
   contents: read
-  actions: read      # deploy-pages 要列本次 run 的 artifact，缺这个会报 "Found 0 artifact(s)"
+  actions: read      # deploy-pages 要列本次 run 的 artifact
   pages: write
   id-token: write
 
 # cancel-in-progress: true 会在连续推送时把正在跑的部署掐掉，
-# 留下一个卡住的 deployment，后面的运行就永远失败。这里改成排队执行。
+# 留下卡住的 deployment，后面的运行就一直失败。这里改成排队执行。
 concurrency:
   group: pages-deploy
   cancel-in-progress: false
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Assemble site
         run: |
@@ -36,9 +36,9 @@ jobs:
           ls -la _site
           du -sh _site
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
