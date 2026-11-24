@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+﻿name: Deploy to GitHub Pages
 
 on:
   push:
@@ -40,5 +40,10 @@ jobs:
         with:
           path: _site
 
+      # GitHub 的 artifact 列表有最终一致性延迟，紧接着部署偶尔会「Found 0 artifact(s)」
+      - name: Wait for artifact to be visible
+        run: sleep 10
+
       - id: deployment
         uses: actions/deploy-pages@v5
+
