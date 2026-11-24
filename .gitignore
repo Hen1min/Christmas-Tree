@@ -1,2 +1,6 @@
 ﻿audio/local.mp3
-
+_*.html
+_*.txt
+_*.png
+_*.mjs
+_*.zip
