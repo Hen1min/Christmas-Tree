@@ -92,4 +92,12 @@ changelog.html             更新日志页（点页面右下角「更新日志�
 
 美国联邦政府雇员在职作品在美国属公有领域（17 U.S.C. §105），可以自由使用。曲子本身（James Lord Pierpont, 1857）也早已是公有领域。
 
-想换音乐：把新文件放到 `audio/` 下，改 `index.html` 里 `<audio id="bgm" src="./audio/xxx.mp3">` 的路径即可；`preload="metadata"` 只取时长，点 ♪ 才真正下载整个文件。
+### 本地换成自己的音频（不入库）
+
+`index.html` 里的 `<audio>` 有两个 `<source>`：先找 `audio/local.mp3`，找不到才用仓库自带的 `jingle-bells.mp3`。
+所以想在自己机器上听别的版本，只要把文件放到 `audio/local.mp3`——`.gitignore` 已经忽略了它，不会推到 GitHub。
+
+公开站点会继续用仓库里那首公有领域的版本。
+
+`preload="metadata"` 只取时长，点 ♪ 才真正下载整个文件。
+

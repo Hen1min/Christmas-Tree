@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -66,7 +66,11 @@
 <div id="hint">拖动旋转 · 点礼盒开盖 · 滚轮 / 双指缩放</div>
 <button id="musicBtn" type="button" aria-label="背景音乐开关">♪</button>
 <a id="logBtn" href="./changelog.html">更新日志</a>
-<audio id="bgm" src="./audio/jingle-bells.mp3" loop preload="metadata"></audio>
+<audio id="bgm" loop preload="metadata">
+  <!-- 如果本地放了 audio/local.mp3（不入库），会优先用它；否则用仓库自带的公有领域版本 -->
+  <source src="./audio/local.mp3" type="audio/mpeg">
+  <source src="./audio/jingle-bells.mp3" type="audio/mpeg">
+</audio>
 
 <div id="fallback">当前浏览器无法启用 WebGL，请换用 Chrome / Edge / Safari 打开。</div>
 
@@ -1267,6 +1271,7 @@ animate();
 </script>
 </body>
 </html>
+
 
 
 
