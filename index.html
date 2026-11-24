@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -1054,7 +1054,7 @@ bgm.volume = 0;
 const BGM_MAX_VOL = 0.55;
 let musicFade = null;
 let musicStarted = false;
-let musicOn = false;
+let musicOn = true;   // 初始显示为「可关闭」，真正播放在第一次手势时开始
 
 function fadeVolume(to, ms, done) {
   if (musicFade) cancelAnimationFrame(musicFade);
@@ -1106,8 +1106,10 @@ function stopMusic() {
 }
 
 // 浏览器要求先有用户手势才能出声，所以第一次点/按键才真正开始
-function startMusicOnGesture() {
+function startMusicOnGesture(e) {
   if (musicStarted) return;
+  // 点的是「更新日志」这类跳转链接时，不在这儿开始下载音乐
+  if (e && e.target && e.target.closest && e.target.closest('a')) return;
   musicStarted = true;
   startMusic();
 }
