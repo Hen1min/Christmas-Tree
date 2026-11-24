@@ -1,4 +1,4 @@
-﻿name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -10,9 +10,11 @@ permissions:
   pages: write
   id-token: write
 
+# cancel-in-progress: true 会在连续推送时把正在跑的部署掐掉，
+# 留下一个卡住的 deployment，后面的运行就永远失败。这里改成排队执行。
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: pages-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -23,15 +25,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Enable Pages (first run)
+      - name: Setup Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Assemble site
         run: |
           mkdir -p _site
           cp -r index.html changelog.html vendor audio _site/
+          ls -la _site
+          du -sh _site
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -39,5 +41,3 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
-
-
