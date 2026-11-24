@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -66,6 +66,7 @@
 <div id="hint">拖动旋转 · 点礼盒开盖 · 滚轮 / 双指缩放</div>
 <button id="musicBtn" type="button" aria-label="背景音乐开关">♪</button>
 <a id="logBtn" href="./changelog.html">更新日志</a>
+<audio id="bgm" src="./audio/jingle-bells.mp3" loop preload="metadata"></audio>
 
 <div id="fallback">当前浏览器无法启用 WebGL，请换用 Chrome / Edge / Safari 打开。</div>
 
@@ -1045,140 +1046,68 @@ canvas.addEventListener('wheel', (e) => {
   hideHint();
 }, { passive: false });
 
-/* ---------- 背景音乐：WebAudio 现场合成，不依赖任何音频文件 ---------- */
+/* ---------- 背景音乐：真实录音（US Air Force Band of Mid-America 2020） ---------- */
 const musicBtn = el('musicBtn');
+const bgm = el('bgm');
+bgm.volume = 0;
 
-const NOTE_HZ = {
-  C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
-  C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
-  C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99
-};
+const BGM_MAX_VOL = 0.55;
+let musicFade = null;
+let musicStarted = false;
+let musicOn = false;
 
-// Jingle Bells（公有领域）主旋律：音名 + 拍数
-const MELODY = [
-  ['E4', 1], ['E4', 1], ['E4', 2],
-  ['E4', 1], ['E4', 1], ['E4', 2],
-  ['E4', 1], ['G4', 1], ['C4', 1.5], ['D4', 0.5], ['E4', 4],
-  ['F4', 1], ['F4', 1], ['F4', 1.5], ['F4', 0.5],
-  ['F4', 1], ['E4', 1], ['E4', 1], ['E4', 0.5], ['E4', 0.5],
-  ['E4', 1], ['D4', 1], ['D4', 1], ['E4', 1], ['D4', 2], ['G4', 2],
-  [null, 1]
-];
-const BASS_PATTERN = ['C3', 'C3', 'F3', 'G3'];
-
-const TEMPO = 104;
-const BEAT = 60 / TEMPO;
-
-const audio = {
-  ctx: null,
-  master: null,
-  enabled: true,
-  timer: null,
-  nextTime: 0,
-  step: 0
-};
-
-function ensureAudio() {
-  if (audio.ctx) return audio.ctx;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return null;
-  audio.ctx = new AC();
-  audio.master = audio.ctx.createGain();
-  audio.master.gain.value = 0;
-  const lp = audio.ctx.createBiquadFilter();
-  lp.type = 'lowpass';
-  lp.frequency.value = 4000;
-  audio.master.connect(lp).connect(audio.ctx.destination);
-  return audio.ctx;
-}
-
-function playBell(when, freq, dur, peak) {
-  const ctx = audio.ctx;
-  const osc = ctx.createOscillator();
-  osc.type = 'sine';
-  osc.frequency.value = freq;
-  const partial = ctx.createOscillator();
-  partial.type = 'triangle';
-  partial.frequency.value = freq * 2.01;
-  const pg = ctx.createGain();
-  pg.gain.value = 0.22;
-  const g = ctx.createGain();
-  osc.connect(g);
-  partial.connect(pg).connect(g);
-  g.gain.setValueAtTime(0.0001, when);
-  g.gain.exponentialRampToValueAtTime(peak, when + 0.012);
-  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
-  g.connect(audio.master);
-  osc.start(when);
-  partial.start(when);
-  osc.stop(when + dur + 0.06);
-  partial.stop(when + dur + 0.06);
-}
-
-function playPad(when, freq, dur) {
-  const ctx = audio.ctx;
-  const osc = ctx.createOscillator();
-  osc.type = 'sine';
-  osc.frequency.value = freq;
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.0001, when);
-  g.gain.linearRampToValueAtTime(0.05, when + 0.35);
-  g.gain.linearRampToValueAtTime(0.0001, when + dur);
-  osc.connect(g).connect(audio.master);
-  osc.start(when);
-  osc.stop(when + dur + 0.05);
-}
-
-function scheduleNotes() {
-  const ctx = audio.ctx;
-  if (!ctx) return;
-  const lookahead = 0.4;
-  let guard = 0;
-  while (audio.nextTime < ctx.currentTime + lookahead && guard++ < 64) {
-    const entry = MELODY[audio.step % MELODY.length];
-    const name = entry[0];
-    const dur = entry[1] * BEAT;
-    if (name && NOTE_HZ[name]) {
-      playBell(audio.nextTime, NOTE_HZ[name], Math.min(dur * 0.9, 2.0), 0.12);
+function fadeVolume(to, ms, done) {
+  if (musicFade) cancelAnimationFrame(musicFade);
+  const from = bgm.volume;
+  const t0 = performance.now();
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / ms);
+    bgm.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+    if (k < 1) {
+      musicFade = requestAnimationFrame(step);
+    } else {
+      musicFade = null;
+      if (done) done();
     }
-    if (audio.step % 4 === 0) {
-      const bn = BASS_PATTERN[((audio.step / 4) | 0) % BASS_PATTERN.length];
-      playPad(audio.nextTime, NOTE_HZ[bn], BEAT * 4);
-    }
-    audio.nextTime += dur;
-    audio.step++;
-  }
+  };
+  musicFade = requestAnimationFrame(step);
+}
+
+function paintMusic() {
+  musicBtn.classList.toggle('off', !musicOn);
+  musicBtn.setAttribute('aria-label', musicOn ? '关闭背景音乐' : '开启背景音乐');
 }
 
 function startMusic() {
-  try {
-    const ctx = ensureAudio();
-    if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume();
-    audio.nextTime = ctx.currentTime + 0.1;
-    audio.master.gain.cancelScheduledValues(ctx.currentTime);
-    audio.master.gain.setTargetAtTime(0.85, ctx.currentTime, 1.2);
-    if (!audio.timer) audio.timer = setInterval(scheduleNotes, 60);
-  } catch (err) {
-    // 有些环境（旧 Safari / 被策略禁掉）拿不到 AudioContext，静默关掉音乐，不影响画面
-    audio.enabled = false;
-    musicBtn.classList.add('off');
-    console.warn('背景音乐不可用：', err);
+  const p = bgm.play();
+  if (p && typeof p.then === 'function') {
+    p.then(() => {
+      musicOn = true;
+      paintMusic();
+      fadeVolume(BGM_MAX_VOL, 1400);
+    }).catch(() => {
+      // 浏览器拒绝播放（策略/解码失败），保持关闭态，不影响画面
+      musicOn = false;
+      paintMusic();
+    });
+  } else {
+    musicOn = true;
+    paintMusic();
+    fadeVolume(BGM_MAX_VOL, 1400);
   }
 }
 
 function stopMusic() {
-  if (audio.timer) {
-    clearInterval(audio.timer);
-    audio.timer = null;
-  }
-  if (audio.ctx) audio.master.gain.setTargetAtTime(0.0001, audio.ctx.currentTime, 0.2);
+  fadeVolume(0, 400, () => {
+    bgm.pause();
+  });
+  musicOn = false;
+  paintMusic();
 }
 
 // 浏览器要求先有用户手势才能出声，所以第一次点/按键才真正开始
-let musicStarted = false;
 function startMusicOnGesture() {
-  if (musicStarted || !audio.enabled) return;
+  if (musicStarted) return;
   musicStarted = true;
   startMusic();
 }
@@ -1188,22 +1117,16 @@ window.addEventListener('keydown', startMusicOnGesture);
 musicBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
 musicBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  // 第一次点这个按钮：先把音乐打开
   if (!musicStarted) {
     musicStarted = true;
-    audio.enabled = true;
-    musicBtn.classList.remove('off');
-    musicBtn.setAttribute('aria-label', '关闭背景音乐');
     startMusic();
     return;
   }
-  audio.enabled = !audio.enabled;
-  musicBtn.classList.toggle('off', !audio.enabled);
-  musicBtn.setAttribute('aria-label', audio.enabled ? '关闭背景音乐' : '开启背景音乐');
-  if (audio.enabled) startMusic();
-  else stopMusic();
+  if (musicOn) stopMusic();
+  else startMusic();
 });
 
+paintMusic();
 /* ---------- 尺寸 ---------- */
 function resize() {
   const w = window.innerWidth;
@@ -1342,6 +1265,7 @@ animate();
 </script>
 </body>
 </html>
+
 
 
 

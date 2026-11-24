@@ -7,7 +7,7 @@
 - 手机竖屏会自动拉远视角、把礼盒往中间收，双指可缩放
 - 礼盒点一下翻盖打开，再点一下合上；盒体和盖子都是 5 块面拼的**空壳**，打开时盒内和盖子内腔都是空的
 - 开盖时盒子里会**随机蹦出一个 Q 版小玩具**（巧克力 / 小飞机 / 玩具车 / 大哥大 / 糖果 / 伸缩拳套），合盖时缩回盒里，下次再开重新随机
-- 右下角 ♪ 可以开关背景音乐（`Jingle Bells`，用 WebAudio 现场合成，没有音频文件）
+- 右下角 ♪ 开关背景音乐：真实录音 `audio/jingle-bells.mp3`（US Air Force Band of Mid-America，2020 年版），循环播放、点开时 1.4 秒淡入
 
 ## 本地预览
 
@@ -58,6 +58,7 @@ https://hen1min.github.io/Christmas-Tree/
 ```
 index.html                 页面 + 场景 + 交互（全部逻辑都在这一个文件里）
 vendor/three.module.js     three.js r160 本地副本
+audio/jingle-bells.mp3     背景音乐（真实录音，3.2 MB，preload=metadata 不占首屏）
 .github/workflows/pages.yml  推 main 自动发布到 GitHub Pages
 start.bat                  本地起服务
 preview.png                截图（合盖）
@@ -82,3 +83,13 @@ changelog.html             更新日志页（点页面右下角「更新日志�
 ```
 
 记得把上一段的 `latest` 类和 `<span class="tag">最新</span>` 去掉。
+
+## 背景音乐来源
+
+`audio/jingle-bells.mp3` —— *Jingle Bells*，United States Air Force Band of Mid-America（2020），取自 Wikimedia Commons：
+
+<https://commons.wikimedia.org/wiki/File:Jingle_Bells_(2020)_-_Starlifter_and_Roots_in_Blue_-_United_States_Air_Force_Band_of_Mid-America.mp3>
+
+美国联邦政府雇员在职作品在美国属公有领域（17 U.S.C. §105），可以自由使用。曲子本身（James Lord Pierpont, 1857）也早已是公有领域。
+
+想换音乐：把新文件放到 `audio/` 下，改 `index.html` 里 `<audio id="bgm" src="./audio/xxx.mp3">` 的路径即可；`preload="metadata"` 只取时长，点 ♪ 才真正下载整个文件。
