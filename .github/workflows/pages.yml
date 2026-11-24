@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read      # deploy-pages 要列本次 run 的 artifact，缺这个会报 "Found 0 artifact(s)"
   pages: write
   id-token: write
 
