@@ -117,6 +117,8 @@ function roomRoundRect(c, x, y, w, h, r) {
   c.closePath();
 }
 
+let lastGroundY = null;
+
 function drawRoom(groundY) {
   const W = window.innerWidth;
   const H = window.innerHeight;
@@ -191,42 +193,96 @@ function drawRoom(groundY) {
   roomRoundRect(c, winX - 11, winY - 11, winW + 22, 8, 6);
   c.fill();
 
-  // 窗内的雪夜
+  // 窗外的景色跟着本地时间走：白天 / 黄昏 / 夜晚
+  const nowClock = new Date();
+  const hourNow = nowClock.getHours() + nowClock.getMinutes() / 60;
+  const phase = (hourNow >= 6 && hourNow < 17) ? 'day' : (hourNow >= 17 && hourNow < 19.5 ? 'dusk' : 'night');
+
   c.save();
   roomRoundRect(c, winX, winY, winW, winH, 14);
   c.clip();
+
   const sky = c.createLinearGradient(0, winY, 0, winY + winH);
-  sky.addColorStop(0, '#0b1226');
-  sky.addColorStop(1, '#1c2a4d');
+  if (phase === 'day') {
+    sky.addColorStop(0, '#6fb8e8');
+    sky.addColorStop(1, '#d8edff');
+  } else if (phase === 'dusk') {
+    sky.addColorStop(0, '#f2a86f');
+    sky.addColorStop(0.5, '#dd7f7a');
+    sky.addColorStop(1, '#7b4a71');
+  } else {
+    sky.addColorStop(0, '#0b1226');
+    sky.addColorStop(1, '#1c2a4d');
+  }
   c.fillStyle = sky;
   c.fillRect(winX, winY, winW, winH);
 
-  // 星星
-  for (let i = 0; i < 26; i++) {
-    const sx = winX + rnd() * winW;
-    const sy = winY + rnd() * winH * 0.7;
-    const sr = rnd() < 0.2 ? 2.2 : 1.2;
-    c.fillStyle = 'rgba(255, 250, 226, ' + (0.35 + rnd() * 0.5).toFixed(2) + ')';
+  // 太阳 / 月亮
+  const orb = (ox, oy, orad, inner, outer) => {
+    const g = c.createRadialGradient(ox, oy, 0, ox, oy, orad * 3.2);
+    g.addColorStop(0, inner);
+    g.addColorStop(1, outer);
+    c.fillStyle = g;
     c.beginPath();
-    c.arc(sx, sy, sr, 0, Math.PI * 2);
+    c.arc(ox, oy, orad * 3.2, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = inner;
+    c.beginPath();
+    c.arc(ox, oy, orad, 0, Math.PI * 2);
+    c.fill();
+  };
+
+  if (phase === 'day') {
+    orb(winX + winW * 0.74, winY + winH * 0.19, winW * 0.075,
+      '#fff8cf', 'rgba(255, 248, 207, 0)');
+  } else if (phase === 'dusk') {
+    orb(winX + winW * 0.66, winY + winH * 0.60, winW * 0.085,
+      '#ffd9a0', 'rgba(255, 217, 160, 0)');
+  } else {
+    const mx = winX + winW * 0.68;
+    const my = winY + winH * 0.22;
+    const mr = winW * 0.105;
+    c.fillStyle = '#ffe9b0';
+    c.beginPath();
+    c.arc(mx, my, mr, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#0d1428';
+    c.beginPath();
+    c.arc(mx - mr * 0.42, my - mr * 0.28, mr * 0.92, 0, Math.PI * 2);
     c.fill();
   }
 
-  // 月牙
-  const mx = winX + winW * 0.68;
-  const my = winY + winH * 0.22;
-  const mr = winW * 0.105;
-  c.fillStyle = '#ffe9b0';
-  c.beginPath();
-  c.arc(mx, my, mr, 0, Math.PI * 2);
-  c.fill();
-  c.fillStyle = '#0d1428';
-  c.beginPath();
-  c.arc(mx - mr * 0.42, my - mr * 0.28, mr * 0.92, 0, Math.PI * 2);
-  c.fill();
+  // 星星只在夜里出现
+  if (phase === 'night') {
+    for (let i = 0; i < 26; i++) {
+      const sx = winX + rnd() * winW;
+      const sy = winY + rnd() * winH * 0.7;
+      const sr = rnd() < 0.2 ? 2.2 : 1.2;
+      c.fillStyle = 'rgba(255, 250, 226, ' + (0.35 + rnd() * 0.5).toFixed(2) + ')';
+      c.beginPath();
+      c.arc(sx, sy, sr, 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+
+  // 白天 / 黄昏有几朵云
+  if (phase !== 'night') {
+    const cloud = (cx, cy, s0) => {
+      c.fillStyle = phase === 'day' ? 'rgba(255, 255, 255, 0.92)' : 'rgba(255, 220, 198, 0.8)';
+      c.beginPath();
+      c.arc(cx, cy, s0, 0, Math.PI * 2);
+      c.arc(cx + s0 * 0.9, cy + s0 * 0.16, s0 * 0.78, 0, Math.PI * 2);
+      c.arc(cx - s0 * 0.85, cy + s0 * 0.22, s0 * 0.7, 0, Math.PI * 2);
+      c.fill();
+    };
+    cloud(winX + winW * 0.30, winY + winH * 0.20, winW * 0.085);
+    cloud(winX + winW * 0.64, winY + winH * 0.40, winW * 0.062);
+  }
 
   // 雪地
-  c.fillStyle = 'rgba(222, 234, 255, 0.26)';
+  c.fillStyle = phase === 'night' ? 'rgba(222, 234, 255, 0.26)'
+    : phase === 'dusk' ? 'rgba(255, 226, 232, 0.55)'
+      : 'rgba(255, 255, 255, 0.88)';
   c.beginPath();
   c.moveTo(winX, winY + winH * 0.78);
   c.quadraticCurveTo(winX + winW * 0.35, winY + winH * 0.70, winX + winW * 0.7, winY + winH * 0.80);
@@ -236,11 +292,11 @@ function drawRoom(groundY) {
   c.closePath();
   c.fill();
 
-  // 雪人（Q 版：两个圆 + 小帽子 + 鼻子）
+  // 雪人（Q 版：两个圆 + 胡萝卜鼻）
   const snx = winX + winW * 0.30;
   const sny = winY + winH * 0.77;
   const snr = winW * 0.085;
-  c.fillStyle = '#f4f8ff';
+  c.fillStyle = '#f7fbff';
   c.beginPath();
   c.arc(snx, sny, snr, 0, Math.PI * 2);
   c.fill();
@@ -265,7 +321,6 @@ function drawRoom(groundY) {
   c.fillRect(winX + winW / 2 - 3, winY, 6, winH);
   c.fillRect(winX, winY + winH / 2 - 3, winW, 6);
   c.restore();
-
   // 窗台（贴着窗框下沿）+ 一层积雪
   c.fillStyle = '#39405f';
   roomRoundRect(c, winX - 16, winY + winH + 6, winW + 32, 14, 7);
@@ -334,8 +389,9 @@ function drawRoom(groundY) {
   swag(W * 0.66, W * 0.98, H * 0.075);
 
   /* ---- 地板：墙脚线在树后面，树和礼盒都站在这条线下方 ---- */
-  // 墙脚线高度：由 3D 场景里地面原点投影到屏幕的位置决定，桌面和手机都能对上  
-  const groundScreenY = (typeof groundY === 'number' && groundY > 0) ? groundY : H * 0.88;
+  if (typeof groundY === 'number' && groundY > 0) lastGroundY = groundY;
+  // 墙脚线高度：由 3D 场景里地面原点投影到屏幕的位置决定，桌面和手机都能对上
+  const groundScreenY = lastGroundY || H * 0.88;
   const baseY = groundScreenY - Math.max(8, H * 0.035);
 
   // 墙脚线（踢脚板）—— 先画在墙上，再铺地板
@@ -394,7 +450,19 @@ function drawRoom(groundY) {
   vig.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
   c.fillStyle = vig;
   c.fillRect(0, 0, W, H);
+
+  // 房间整体色调跟着时间轻微变化：白天偏暖、夜里偏冷
+  if (phase === 'day') {
+    c.fillStyle = 'rgba(255, 240, 220, 0.05)';
+    c.fillRect(0, 0, W, H);
+  } else if (phase === 'night') {
+    c.fillStyle = 'rgba(30, 18, 48, 0.10)';
+    c.fillRect(0, 0, W, H);
+  }
 }
+
+// 每分钟重画一次，窗外的天色会跟着时间自己变
+setInterval(() => drawRoom(lastGroundY), 60000);
 
 window.addEventListener('resize', () => drawRoom());
 
@@ -1583,6 +1651,8 @@ animate();
 </script>
 </body>
 </html>
+
+
 
 
 
