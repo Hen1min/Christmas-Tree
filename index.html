@@ -16,8 +16,8 @@
     letter-spacing: .22em; pointer-events: none; user-select: none;
     background: linear-gradient(92deg, #ffe9c4, #ffcf95, #fff3d8);
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    opacity: .96;
-    filter: drop-shadow(0 1px 2px rgba(70, 10, 6, .55));
+    opacity: 1;
+    filter: drop-shadow(0 1px 3px rgba(58, 16, 12, .7));
   }
   #hint {
     position: fixed; bottom: 4.5vh; left: 0; right: 0; text-align: center;
@@ -136,9 +136,9 @@ function drawRoom() {
 
   // 墙：夜里的蓝紫，越往下越暗
   const wall = c.createLinearGradient(0, 0, 0, H);
-  wall.addColorStop(0, '#c8392b');
-  wall.addColorStop(0.5, '#9d2a20');
-  wall.addColorStop(1, '#5c1a14');
+  wall.addColorStop(0, '#d18d81');
+  wall.addColorStop(0.5, '#ac6559');
+  wall.addColorStop(1, '#7a4a42');
   c.fillStyle = wall;
   c.fillRect(0, 0, W, H);
 
@@ -1565,6 +1565,8 @@ animate();
 </script>
 </body>
 </html>
+
+
 
 
 
