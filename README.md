@@ -101,3 +101,18 @@ changelog.html             更新日志页（点页面右下角「更新日志�
 
 `preload="metadata"` 只取时长，点 ♪ 才真正下载整个文件。
 
+## 背景房间
+
+背景是 `drawRoom()` 用 Canvas 2D 现画的（`#room` 画布，z-index 0），WebGL 画布改成 `alpha: true` 叠在上面，所以树的辉光还是叠加在墙上的效果。
+
+画的内容：墙纸圆点 → 顶部暖光 → 窗户（雪夜/月亮/雪人/雪地/窗棂/窗台积雪）→ 左边相框 → 顶部两段花环和彩灯 → 地板 + 地毯 → 护墙板 → 四周压暗。
+
+想调：
+
+| 想改什么 | 改哪里 |
+| --- | --- |
+| 墙的颜色 | `drawRoom()` 里 `wall` 渐变的三个色标 |
+| 窗户大小 / 位置 | `winW`、`winH`、`winX`、`winY` |
+| 花环 | 结尾两行 `swag(W * 0.02, W * 0.34, H * 0.075)` |
+| 地毯 | `rugRx`、`rugRy`、三个 `rug.addColorStop` |
+| 换回纯黑背景 | 把 `renderer.setClearColor(0x000000, 0)` 改回 `(0x03050a, 1)`，并删掉 `#room` 画布 |

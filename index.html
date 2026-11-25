@@ -58,9 +58,15 @@
   #logBtn:hover { transform: scale(1.05); border-color: rgba(180, 225, 255, .6); }
 
 
+  #room {
+    position: fixed; inset: 0; width: 100vw; height: 100vh;
+    z-index: 0; pointer-events: none;
+  }
+  #stage { position: relative; z-index: 1; }
 </style>
 </head>
 <body>
+<canvas id="room"></canvas>
 <canvas id="stage"></canvas>
 <h1 id="title">MERRY CHRISTMAS</h1>
 <div id="hint">拖动旋转 · 点礼盒开盖 · 滚轮 / 双指缩放</div>
@@ -83,7 +89,7 @@ const canvas = el('stage');
 let renderer;
 try {
   renderer = new THREE.WebGLRenderer({
-    canvas, antialias: true, alpha: false, powerPreference: 'high-performance'
+    canvas, antialias: true, alpha: true, powerPreference: 'high-performance'
   });
 } catch (err) {
   el('fallback').style.display = 'grid';
@@ -92,9 +98,280 @@ try {
 
 const DPR = Math.min(window.devicePixelRatio || 1, 2);
 renderer.setPixelRatio(DPR);
-renderer.setClearColor(0x03050a, 1);
+renderer.setClearColor(0x000000, 0);   // 透明画布，背景交给 #room
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
+/* ---------- 背景：Q 版圣诞夜的客厅墙（Canvas 2D 现画，不依赖任何图片） ---------- */
+const roomCanvas = el('room');
+const roomCtx = roomCanvas.getContext('2d');
+
+function roomRoundRect(c, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  c.beginPath();
+  c.moveTo(x + rr, y);
+  c.arcTo(x + w, y, x + w, y + h, rr);
+  c.arcTo(x + w, y + h, x, y + h, rr);
+  c.arcTo(x, y + h, x, y, rr);
+  c.arcTo(x, y, x + w, y, rr);
+  c.closePath();
+}
+
+function drawRoom() {
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  roomCanvas.width = Math.round(W * dpr);
+  roomCanvas.height = Math.round(H * dpr);
+
+  const c = roomCtx;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, W, H);
+
+  let seed = 20261225;
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+  };
+
+  // 墙：夜里的蓝紫，越往下越暗
+  const wall = c.createLinearGradient(0, 0, 0, H);
+  wall.addColorStop(0, '#2b3150');
+  wall.addColorStop(0.5, '#1e2338');
+  wall.addColorStop(1, '#111320');
+  c.fillStyle = wall;
+  c.fillRect(0, 0, W, H);
+
+  // 墙纸圆点：大而柔，卡通感
+  const gap = Math.max(44, Math.min(76, W / 17));
+  c.fillStyle = 'rgba(255, 240, 224, 0.05)';
+  let row = 0;
+  for (let y = gap * 0.55; y < H; y += gap, row++) {
+    const off = (row % 2) * (gap / 2);
+    for (let x = off; x < W; x += gap) {
+      c.beginPath();
+      c.arc(x, y, Math.max(2.2, gap * 0.058), 0, Math.PI * 2);
+      c.fill();
+    }
+  }
+
+  // 顶部一盏暖光，像吊灯打下来的光
+  const lamp = c.createRadialGradient(W * 0.5, -H * 0.18, 0, W * 0.5, -H * 0.18, H * 0.95);
+  lamp.addColorStop(0, 'rgba(255, 198, 132, 0.16)');
+  lamp.addColorStop(0.45, 'rgba(255, 176, 122, 0.055)');
+  lamp.addColorStop(1, 'rgba(255, 176, 122, 0)');
+  c.fillStyle = lamp;
+  c.fillRect(0, 0, W, H);
+
+  /* ---- 窗户（右下）---- */
+  const winW = Math.min(W * 0.24, 230);
+  const winH = winW * 1.34;
+  const winX = W - winW - Math.max(22, W * 0.055);
+  const winY = H * 0.17;
+
+  // 窗框外圈
+  c.fillStyle = '#3a4266';
+  roomRoundRect(c, winX - 11, winY - 11, winW + 22, winH + 22, 22);
+  c.fill();
+  c.fillStyle = 'rgba(255, 255, 255, 0.05)';
+  roomRoundRect(c, winX - 11, winY - 11, winW + 22, 8, 6);
+  c.fill();
+
+  // 窗内的雪夜
+  c.save();
+  roomRoundRect(c, winX, winY, winW, winH, 14);
+  c.clip();
+  const sky = c.createLinearGradient(0, winY, 0, winY + winH);
+  sky.addColorStop(0, '#0b1226');
+  sky.addColorStop(1, '#1c2a4d');
+  c.fillStyle = sky;
+  c.fillRect(winX, winY, winW, winH);
+
+  // 星星
+  for (let i = 0; i < 26; i++) {
+    const sx = winX + rnd() * winW;
+    const sy = winY + rnd() * winH * 0.7;
+    const sr = rnd() < 0.2 ? 2.2 : 1.2;
+    c.fillStyle = 'rgba(255, 250, 226, ' + (0.35 + rnd() * 0.5).toFixed(2) + ')';
+    c.beginPath();
+    c.arc(sx, sy, sr, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // 月牙
+  const mx = winX + winW * 0.68;
+  const my = winY + winH * 0.22;
+  const mr = winW * 0.105;
+  c.fillStyle = '#ffe9b0';
+  c.beginPath();
+  c.arc(mx, my, mr, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = '#0d1428';
+  c.beginPath();
+  c.arc(mx - mr * 0.42, my - mr * 0.28, mr * 0.92, 0, Math.PI * 2);
+  c.fill();
+
+  // 雪地
+  c.fillStyle = 'rgba(222, 234, 255, 0.26)';
+  c.beginPath();
+  c.moveTo(winX, winY + winH * 0.78);
+  c.quadraticCurveTo(winX + winW * 0.35, winY + winH * 0.70, winX + winW * 0.7, winY + winH * 0.80);
+  c.quadraticCurveTo(winX + winW * 0.88, winY + winH * 0.86, winX + winW, winY + winH * 0.80);
+  c.lineTo(winX + winW, winY + winH);
+  c.lineTo(winX, winY + winH);
+  c.closePath();
+  c.fill();
+
+  // 雪人（Q 版：两个圆 + 小帽子 + 鼻子）
+  const snx = winX + winW * 0.30;
+  const sny = winY + winH * 0.77;
+  const snr = winW * 0.085;
+  c.fillStyle = '#f4f8ff';
+  c.beginPath();
+  c.arc(snx, sny, snr, 0, Math.PI * 2);
+  c.fill();
+  c.beginPath();
+  c.arc(snx, sny - snr * 1.15, snr * 0.72, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = '#e8623f';
+  c.beginPath();
+  c.moveTo(snx + snr * 0.55, sny - snr * 1.25);
+  c.lineTo(snx + snr * 1.15, sny - snr * 1.1);
+  c.lineTo(snx + snr * 0.55, sny - snr * 0.98);
+  c.closePath();
+  c.fill();
+  c.fillStyle = '#2f3b57';
+  c.beginPath();
+  c.arc(snx - snr * 0.28, sny - snr * 1.3, Math.max(1, snr * 0.1), 0, Math.PI * 2);
+  c.arc(snx + snr * 0.16, sny - snr * 1.3, Math.max(1, snr * 0.1), 0, Math.PI * 2);
+  c.fill();
+
+  // 窗棂
+  c.fillStyle = '#3a4266';
+  c.fillRect(winX + winW / 2 - 3, winY, 6, winH);
+  c.fillRect(winX, winY + winH / 2 - 3, winW, 6);
+  c.restore();
+
+  // 窗台（贴着窗框下沿）+ 一层积雪
+  c.fillStyle = '#39405f';
+  roomRoundRect(c, winX - 16, winY + winH + 6, winW + 32, 14, 7);
+  c.fill();
+  c.fillStyle = 'rgba(240, 246, 255, 0.9)';
+  roomRoundRect(c, winX - 14, winY + winH + 4, winW + 28, 7, 4);
+  c.fill();
+
+  /* ---- 左边的小相框 ---- */
+  const fx = Math.max(20, W * 0.075);
+  const fy = H * 0.21;
+  const fs = Math.min(W * 0.14, 120);
+  c.fillStyle = '#8a6748';
+  roomRoundRect(c, fx - 9, fy - 9, fs + 18, fs + 18, 10);
+  c.fill();
+  c.fillStyle = 'rgba(255, 255, 255, 0.10)';
+  roomRoundRect(c, fx - 9, fy - 9, fs + 18, 6, 4);
+  c.fill();
+  c.fillStyle = '#eef4ff';
+  roomRoundRect(c, fx, fy, fs, fs, 6);
+  c.fill();
+  // 相框里画棵小树
+  c.fillStyle = '#2f7d5b';
+  c.beginPath();
+  c.moveTo(fx + fs * 0.5, fy + fs * 0.16);
+  c.lineTo(fx + fs * 0.78, fy + fs * 0.72);
+  c.lineTo(fx + fs * 0.22, fy + fs * 0.72);
+  c.closePath();
+  c.fill();
+  c.fillStyle = '#7d5233';
+  c.fillRect(fx + fs * 0.45, fy + fs * 0.72, fs * 0.1, fs * 0.14);
+  c.fillStyle = '#ffe082';
+  c.beginPath();
+  c.arc(fx + fs * 0.5, fy + fs * 0.2, fs * 0.05, 0, Math.PI * 2);
+  c.fill();
+
+  /* ---- 顶部圣诞花环（两段，避开中间的星星）---- */
+  const swag = (x0, x1, sag) => {
+    c.strokeStyle = '#2f6f52';
+    c.lineWidth = Math.max(4, H * 0.008);
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(x0, H * 0.035);
+    c.quadraticCurveTo((x0 + x1) / 2, H * 0.035 + sag, x1, H * 0.035);
+    c.stroke();
+    const n = 7;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      const px = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * ((x0 + x1) / 2) + t * t * x1;
+      const py = (1 - t) * (1 - t) * (H * 0.035) + 2 * (1 - t) * t * (H * 0.035 + sag) + t * t * (H * 0.035);
+      const warm = ['#ffd48a', '#ff9d6e', '#fff2c8', '#9be8c8'][i % 4];
+      c.fillStyle = warm;
+      c.beginPath();
+      c.arc(px, py + 4, Math.max(2.6, H * 0.006), 0, Math.PI * 2);
+      c.fill();
+      const glow = c.createRadialGradient(px, py + 4, 0, px, py + 4, Math.max(10, H * 0.03));
+      glow.addColorStop(0, 'rgba(255, 210, 150, 0.28)');
+      glow.addColorStop(1, 'rgba(255, 210, 150, 0)');
+      c.fillStyle = glow;
+      c.beginPath();
+      c.arc(px, py + 4, Math.max(10, H * 0.03), 0, Math.PI * 2);
+      c.fill();
+    }
+  };
+  swag(W * 0.02, W * 0.34, H * 0.075);
+  swag(W * 0.66, W * 0.98, H * 0.075);
+
+  /* ---- 地板 + 地毯 ---- */
+  const baseY = H * 0.87;
+  const floor = c.createLinearGradient(0, baseY, 0, H);
+  floor.addColorStop(0, '#1b1a27');
+  floor.addColorStop(1, '#0e0f16');
+  c.fillStyle = floor;
+  c.fillRect(0, baseY, W, H - baseY);
+
+  // 树下的圆地毯
+  const rugRx = Math.min(W * 0.34, 460);
+  const rugRy = Math.min(H * 0.10, 90);
+  const rugY = baseY + (H - baseY) * 0.55;
+  const rug = c.createRadialGradient(W * 0.5, rugY, 0, W * 0.5, rugY, rugRx);
+  rug.addColorStop(0, 'rgba(210, 86, 96, 0.30)');
+  rug.addColorStop(0.72, 'rgba(210, 86, 96, 0.16)');
+  rug.addColorStop(1, 'rgba(210, 86, 96, 0)');
+  c.save();
+  c.translate(W * 0.5, rugY);
+  c.scale(1, rugRy / rugRx);
+  c.fillStyle = rug;
+  c.beginPath();
+  c.arc(0, 0, rugRx, 0, Math.PI * 2);
+  c.fill();
+  c.strokeStyle = 'rgba(255, 214, 180, 0.12)';
+  c.lineWidth = 3 * (rugRx / rugRx);
+  c.beginPath();
+  c.arc(0, 0, rugRx * 0.82, 0, Math.PI * 2);
+  c.stroke();
+  c.restore();
+
+  c.fillStyle = '#171a29';
+  c.fillRect(0, baseY, W, H - baseY);
+  c.fillStyle = 'rgba(210, 226, 255, 0.10)';
+  c.fillRect(0, baseY, W, Math.max(2, H * 0.0035));
+  c.strokeStyle = 'rgba(210, 226, 255, 0.05)';
+  c.lineWidth = 1;
+  const panelGap = Math.max(80, W / 9);
+  for (let x = panelGap; x < W; x += panelGap) {
+    c.beginPath();
+    c.moveTo(x, baseY + 10);
+    c.lineTo(x, H);
+    c.stroke();
+  }
+
+  /* ---- 四周压暗，让树发光更明显 ---- */
+  const vig = c.createRadialGradient(W * 0.5, H * 0.46, Math.min(W, H) * 0.28, W * 0.5, H * 0.46, Math.max(W, H) * 0.78);
+  vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  vig.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+  c.fillStyle = vig;
+  c.fillRect(0, 0, W, H);
+}
+
+window.addEventListener('resize', drawRoom);
+drawRoom();
 
 const scene = new THREE.Scene();
 
@@ -1279,6 +1556,10 @@ animate();
 </script>
 </body>
 </html>
+
+
+
+
 
 
 
