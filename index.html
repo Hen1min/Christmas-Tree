@@ -14,10 +14,10 @@
     position: fixed; top: 4.5vh; left: 0; right: 0; text-align: center; margin: 0;
     font: 500 clamp(17px, 3vw, 28px)/1.4 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
     letter-spacing: .22em; pointer-events: none; user-select: none;
-    background: linear-gradient(92deg, #17735a, #1f6fb5, #5b3f9e);
+    background: linear-gradient(92deg, #ffe9c4, #ffcf95, #fff3d8);
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    opacity: .95;
-    filter: drop-shadow(0 1px 1px rgba(255, 246, 232, .55));
+    opacity: .96;
+    filter: drop-shadow(0 1px 2px rgba(70, 10, 6, .55));
   }
   #hint {
     position: fixed; bottom: 4.5vh; left: 0; right: 0; text-align: center;
@@ -136,9 +136,9 @@ function drawRoom() {
 
   // 墙：夜里的蓝紫，越往下越暗
   const wall = c.createLinearGradient(0, 0, 0, H);
-  wall.addColorStop(0, '#efd7c3');
-  wall.addColorStop(0.5, '#c9a189');
-  wall.addColorStop(1, '#6d5243');
+  wall.addColorStop(0, '#c8392b');
+  wall.addColorStop(0.5, '#9d2a20');
+  wall.addColorStop(1, '#5c1a14');
   c.fillStyle = wall;
   c.fillRect(0, 0, W, H);
 
@@ -330,8 +330,8 @@ function drawRoom() {
   /* ---- 地板 + 地毯 ---- */
   const baseY = H * 0.87;
   const floor = c.createLinearGradient(0, baseY, 0, H);
-  floor.addColorStop(0, '#3b2a21');
-  floor.addColorStop(1, '#1c1410');
+  floor.addColorStop(0, '#3a1d16');
+  floor.addColorStop(1, '#170b09');
   c.fillStyle = floor;
   c.fillRect(0, baseY, W, H - baseY);
 
@@ -357,7 +357,7 @@ function drawRoom() {
   c.stroke();
   c.restore();
 
-  c.fillStyle = '#33241d';
+  c.fillStyle = '#331812';
   c.fillRect(0, baseY, W, H - baseY);
   c.fillStyle = 'rgba(210, 226, 255, 0.10)';
   c.fillRect(0, baseY, W, Math.max(2, H * 0.0035));
@@ -1032,7 +1032,7 @@ const gifts = new THREE.Group();
 scene.add(gifts);
 
 const giftSpecs = [
-  { w: 0.62, h: 0.50, d: 0.62, x: -1.62, z: 0.80, ry: 0.34, color: 0xe0455c, ribbon: 0xffd98a },
+  { w: 0.62, h: 0.50, d: 0.62, x: -1.62, z: 0.80, ry: 0.34, color: 0xf4e4c6, ribbon: 0xc0392b },
   { w: 0.48, h: 0.42, d: 0.48, x: 1.54, z: 0.88, ry: -0.52, color: 0x2fb8a8, ribbon: 0xfff1cc },
   { w: 0.34, h: 0.30, d: 0.34, x: 0.74, z: 1.70, ry: 0.85, color: 0x8f6cf2, ribbon: 0xffc2e8 },
   { w: 0.40, h: 0.34, d: 0.40, x: -0.62, z: 1.58, ry: -0.22, color: 0x4a7cf0, ribbon: 0xd8e6ff }
@@ -1565,6 +1565,8 @@ animate();
 </script>
 </body>
 </html>
+
+
 
 
 
