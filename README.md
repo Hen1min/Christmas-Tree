@@ -64,6 +64,7 @@ start.bat                  本地起服务
 preview.png                截图（合盖）
 preview-open.png           截图（开盖，能看到空腔）
 preview-lid.png            截图（盖子特写，能看到盖子也是空心的）
+preview-day.png            截图（白天的窗外）
 changelog.html             更新日志页（点页面右下角「更新日志」进）
 ```
 
@@ -127,4 +128,5 @@ changelog.html             更新日志页（点页面右下角「更新日志�
 | 花环 | 结尾两行 `swag(W * 0.02, W * 0.34, H * 0.075)` |
 | 地毯 | `rugRx`、`rugRy`、三个 `rug.addColorStop` |
 | 换回纯黑背景 | 把 `renderer.setClearColor(0x000000, 0)` 改回 `(0x03050a, 1)`，并删掉 `#room` 画布 |
+
 
