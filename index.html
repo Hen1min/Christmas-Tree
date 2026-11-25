@@ -14,15 +14,15 @@
     position: fixed; top: 4.5vh; left: 0; right: 0; text-align: center; margin: 0;
     font: 500 clamp(17px, 3vw, 28px)/1.4 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
     letter-spacing: .22em; pointer-events: none; user-select: none;
-    background: linear-gradient(92deg, #ffe9c4, #ffcf95, #fff3d8);
+    background: linear-gradient(92deg, #14604a, #1f6fb5, #5b3f9e);
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    opacity: 1;
-    filter: drop-shadow(0 1px 3px rgba(58, 16, 12, .7));
+    opacity: .97;
+    filter: drop-shadow(0 1px 1px rgba(255, 255, 255, .65));
   }
   #hint {
     position: fixed; bottom: 4.5vh; left: 0; right: 0; text-align: center;
     font: 400 13px/1.6 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-    color: rgba(198, 222, 255, .5); letter-spacing: .14em;
+    color: rgba(45, 24, 18, .92); letter-spacing: .14em; text-shadow: 0 1px 0 rgba(255, 240, 235, .22);
     pointer-events: none; user-select: none; transition: opacity 1s ease;
   }
   #hint.hide { opacity: 0; }
@@ -117,7 +117,7 @@ function roomRoundRect(c, x, y, w, h, r) {
   c.closePath();
 }
 
-function drawRoom() {
+function drawRoom(groundY) {
   const W = window.innerWidth;
   const H = window.innerHeight;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -136,9 +136,9 @@ function drawRoom() {
 
   // 墙：夜里的蓝紫，越往下越暗
   const wall = c.createLinearGradient(0, 0, 0, H);
-  wall.addColorStop(0, '#d18d81');
-  wall.addColorStop(0.5, '#ac6559');
-  wall.addColorStop(1, '#7a4a42');
+  wall.addColorStop(0, '#f6e2e2');
+  wall.addColorStop(0.5, '#e7c3c3');
+  wall.addColorStop(1, '#c99a9a');
   c.fillStyle = wall;
   c.fillRect(0, 0, W, H);
 
@@ -163,14 +163,20 @@ function drawRoom() {
   c.fillStyle = lamp;
   c.fillRect(0, 0, W, H);
 
-  // 树后面压一层柔和的暗影：墙变亮了，但树还得能发光
-  const shade = c.createRadialGradient(W * 0.5, H * 0.44, 0, W * 0.5, H * 0.44, Math.max(W, H) * 0.40);
-  shade.addColorStop(0, 'rgba(24, 12, 8, 0.26)');
-  shade.addColorStop(0.55, 'rgba(24, 12, 8, 0.10)');
-  shade.addColorStop(1, 'rgba(24, 12, 8, 0)');
+  // 树背后一层椭圆的柔和暗影，让树在浅色墙上还能立起来
+  const shadeRx = Math.min(W * 0.30, 400);
+  const shade = c.createRadialGradient(0, 0, 0, 0, 0, shadeRx);
+  shade.addColorStop(0, 'rgba(74, 38, 52, 0.42)');
+  shade.addColorStop(0.55, 'rgba(74, 38, 52, 0.20)');
+  shade.addColorStop(1, 'rgba(74, 38, 52, 0)');
+  c.save();
+  c.translate(W * 0.5, H * 0.40);
+  c.scale(1, 1.6);
   c.fillStyle = shade;
-  c.fillRect(0, 0, W, H);
-
+  c.beginPath();
+  c.arc(0, 0, shadeRx, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
   /* ---- 窗户（右下）---- */
   const winW = Math.min(W * 0.24, 230);
   const winH = winW * 1.34;
@@ -327,60 +333,70 @@ function drawRoom() {
   swag(W * 0.02, W * 0.34, H * 0.075);
   swag(W * 0.66, W * 0.98, H * 0.075);
 
-  /* ---- 地板 + 地毯 ---- */
-  const baseY = H * 0.87;
+  /* ---- 地板：墙脚线在树后面，树和礼盒都站在这条线下方 ---- */
+  // 墙脚线高度：由 3D 场景里地面原点投影到屏幕的位置决定，桌面和手机都能对上  
+  const groundScreenY = (typeof groundY === 'number' && groundY > 0) ? groundY : H * 0.88;
+  const baseY = groundScreenY - Math.max(8, H * 0.035);
+
+  // 墙脚线（踢脚板）—— 先画在墙上，再铺地板
+  const skirtH = Math.max(9, H * 0.014);
+  c.fillStyle = '#f3e0dc';
+  c.fillRect(0, baseY - skirtH, W, skirtH);
+  c.fillStyle = 'rgba(120, 70, 60, 0.18)';
+  c.fillRect(0, baseY - skirtH, W, Math.max(2, H * 0.003));
+
+  // 地板：暖木色，越靠近镜头越深
   const floor = c.createLinearGradient(0, baseY, 0, H);
-  floor.addColorStop(0, '#3a1d16');
-  floor.addColorStop(1, '#170b09');
+  floor.addColorStop(0, '#c1947a');
+  floor.addColorStop(0.4, '#a5785c');
+  floor.addColorStop(1, '#6f4c38');
   c.fillStyle = floor;
   c.fillRect(0, baseY, W, H - baseY);
 
-  // 树下的圆地毯
-  const rugRx = Math.min(W * 0.34, 460);
-  const rugRy = Math.min(H * 0.10, 90);
-  const rugY = baseY + (H - baseY) * 0.55;
-  const rug = c.createRadialGradient(W * 0.5, rugY, 0, W * 0.5, rugY, rugRx);
-  rug.addColorStop(0, 'rgba(210, 86, 96, 0.30)');
-  rug.addColorStop(0.72, 'rgba(210, 86, 96, 0.16)');
-  rug.addColorStop(1, 'rgba(210, 86, 96, 0)');
-  c.save();
-  c.translate(W * 0.5, rugY);
-  c.scale(1, rugRy / rugRx);
-  c.fillStyle = rug;
-  c.beginPath();
-  c.arc(0, 0, rugRx, 0, Math.PI * 2);
-  c.fill();
-  c.strokeStyle = 'rgba(255, 214, 180, 0.12)';
-  c.lineWidth = 3 * (rugRx / rugRx);
-  c.beginPath();
-  c.arc(0, 0, rugRx * 0.82, 0, Math.PI * 2);
-  c.stroke();
-  c.restore();
-
-  c.fillStyle = '#331812';
-  c.fillRect(0, baseY, W, H - baseY);
-  c.fillStyle = 'rgba(210, 226, 255, 0.10)';
-  c.fillRect(0, baseY, W, Math.max(2, H * 0.0035));
-  c.strokeStyle = 'rgba(210, 226, 255, 0.05)';
-  c.lineWidth = 1;
-  const panelGap = Math.max(80, W / 9);
-  for (let x = panelGap; x < W; x += panelGap) {
+  // 地板缝：往远处收拢，做出一点透视
+  c.strokeStyle = 'rgba(70, 40, 26, 0.16)';
+  c.lineWidth = Math.max(1, W * 0.0012);
+  for (let i = -9; i <= 9; i++) {
+    const topX = W * 0.5 + i * (W * 0.058);
+    const botX = W * 0.5 + i * (W * 0.105);
     c.beginPath();
-    c.moveTo(x, baseY + 10);
-    c.lineTo(x, H);
+    c.moveTo(topX, baseY);
+    c.lineTo(botX, H);
     c.stroke();
   }
 
+  // 墙脚线下的阴影，让墙和地真的接上
+  const seamShadow = c.createLinearGradient(0, baseY, 0, baseY + H * 0.05);
+  seamShadow.addColorStop(0, 'rgba(60, 30, 22, 0.35)');
+  seamShadow.addColorStop(1, 'rgba(60, 30, 22, 0)');
+  c.fillStyle = seamShadow;
+  c.fillRect(0, baseY, W, H * 0.05);
+
+  // 树底下的地面投影（椭圆，柔边）
+  const poolRx = Math.min(W * 0.30, 380);
+  const poolRy = poolRx * 0.26;
+  const poolCy = baseY + (H - baseY) * 0.62;
+  const pool = c.createRadialGradient(0, 0, 0, 0, 0, poolRx);
+  pool.addColorStop(0, 'rgba(52, 26, 18, 0.45)');
+  pool.addColorStop(0.55, 'rgba(52, 26, 18, 0.22)');
+  pool.addColorStop(1, 'rgba(52, 26, 18, 0)');
+  c.save();
+  c.translate(W * 0.5, poolCy);
+  c.scale(1, poolRy / poolRx);
+  c.fillStyle = pool;
+  c.beginPath();
+  c.arc(0, 0, poolRx, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
   /* ---- 四周压暗，让树发光更明显 ---- */
   const vig = c.createRadialGradient(W * 0.5, H * 0.46, Math.min(W, H) * 0.28, W * 0.5, H * 0.46, Math.max(W, H) * 0.78);
   vig.addColorStop(0, 'rgba(0, 0, 0, 0)');
-  vig.addColorStop(1, 'rgba(0, 0, 0, 0.6)');
+  vig.addColorStop(1, 'rgba(0, 0, 0, 0.45)');
   c.fillStyle = vig;
   c.fillRect(0, 0, W, H);
 }
 
-window.addEventListener('resize', drawRoom);
-drawRoom();
+window.addEventListener('resize', () => drawRoom());
 
 const scene = new THREE.Scene();
 
@@ -557,7 +573,7 @@ const foliageMat = new THREE.ShaderMaterial({
       float hue = uHueBase + 0.26 * aT + 0.05 * sin(uTime * 0.55 + aT * 5.5);
       vec3 col = hsv2rgb(vec3(fract(hue), 0.86, 1.0));
       float tw = 0.55 + 0.45 * sin(uTime * 2.2 + aPhase * 43.0);
-      vColor = col * (1.02 + 0.60 * tw);
+      vColor = col * (1.14 + 0.62 * tw);
       vAlpha = 0.45 + 0.55 * tw;
       gl_PointSize = aSize * (0.82 + 0.5 * (1.0 - aT)) * uPixelRatio * (150.0 / max(-mv.z, 0.001));
       gl_Position = projectionMatrix * mv;
@@ -1439,6 +1455,8 @@ function resize() {
   camera.updateProjectionMatrix();
   layoutCamera();
   layoutGifts();
+  const groundPoint = new THREE.Vector3(0, 0, 0).project(camera);
+  drawRoom((1 - (groundPoint.y * 0.5 + 0.5)) * h);
   foliageMat.uniforms.uPixelRatio.value = renderer.getPixelRatio();
   renderer.render(scene, camera);
 }
@@ -1565,6 +1583,14 @@ animate();
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
 
 
 
